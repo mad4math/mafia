@@ -7,6 +7,8 @@ def role(game, player):
     p = game["players"][player]
     pl = player_list(game)
     role_actions = "You are a {}".format(p["role"])
+    if not p["intro"]:
+        return "Please post your intro on <a href=https://mafia.csail.mit.edu/22-02-town-square/m/s3coEzHXqvaFeeESY>this thread</a>"
     if p["roleblocked"] and p["role"]!="gay knight":
         return role_actions + "<br> You are roleblocked today!"
     if not p["alive"]:
@@ -115,7 +117,7 @@ def main_page(game, player, messages):
     <body>
       <div style="width: 100%; overflow: hidden;">
         <div>
-                game ID:<input id="id" value="spring22-01" disabled><br>
+                game ID:<input id="id" value="fall22-01" disabled><br>
                 username:<input id="player" value="{}" disabled><br>
               </div>
               <div>

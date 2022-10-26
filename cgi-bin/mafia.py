@@ -3,8 +3,8 @@ import json
 import shlex
 import traceback
 import os
-roles = ["investigator","prophet","roleblocker","priest","vigilante","gay knight","seer"] #all the roles
-straight_roles = ["investigator","prophet","roleblocker","priest","vigilante","seer"] #all the roles that aren't gay
+roles = ["investigator","prophet","priest","vigilante","gay knight","seer"] #all the roles
+straight_roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles that aren't gay
 
 def load_gamestate(game_file):
     with open(game_file) as f:
@@ -38,6 +38,7 @@ def setup(game):
             p["correct"] = False
         elif p["role"] == "investigator":
             p["frames"] = 1
+    output("mafia","{} are the mafia ".format(",".join(x for x in game["players"] if game["players"][x]["team"]=="mafia")))
 
 
 def generate_players(players,mafia):
@@ -71,6 +72,7 @@ def generate_players(players,mafia):
                     result[p]["partner"]=last_gay
                     last_gay=None
             result[p]["role"]=role
+            result[p]["intro"]=0
             m -= 1
     return result
 
@@ -546,6 +548,8 @@ def do_command(game, command):
         elif l[1] == "untrap":
             check_valid_player(game, l[2])
             untrap(game, player, l[2])
+        elif l[1] == "intro":
+            game["players"][l[0]]["intro"]=1
 
         return (game, command)
 
