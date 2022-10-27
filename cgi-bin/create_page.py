@@ -6,7 +6,7 @@ player_list = lambda game:sorted(game["players"])
 def role(game, player):
     p = game["players"][player]
     pl = player_list(game)
-    role_actions = "You are a {}".format(p["role"])
+    role_actions = "You are a {}<br>".format(p["role"])
     if not p["intro"]:
         return "Please post your intro on <a href=https://mafia.csail.mit.edu/22-02-town-square/m/s3coEzHXqvaFeeESY>this thread</a>"
     if p["roleblocked"] and p["role"]!="gay knight":
@@ -82,17 +82,17 @@ def role(game, player):
             a += """
             Your partner has died! You will die at the end of <b>{}</b>.<br>
             """.format("tonight" if p["dying"] else "tomorrow")
-        if p["correct"]:
-            a += """
-            <br> {} killed your partner! You may revenge kill them with "bang"!
-            <br>
-            """.format(game["deaths"][p["partner"]]["true_killer"])
-        else:
-            a += """
-            Who do you think did it? You have <b>{}</b> guesses left.<br>
-            <select id="target">{}</select>
-            <button onclick="sendInfallible()"> Submit </button>
-            """.format(p["guesses"],all_players_options)
+            if p["correct"]:
+                a += """
+                <br> {} killed your partner! You may revenge kill them with "bang"!
+                <br>
+                """.format(game["deaths"][p["partner"]]["true_killer"])
+            else:
+                a += """
+                Who do you think did it? You have <b>{}</b> guesses left.<br>
+                <select id="target">{}</select>
+                <button onclick="sendInfallible()"> Submit </button>
+                """.format(p["guesses"],all_players_options)
 
         role_actions += a
 

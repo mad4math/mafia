@@ -18,6 +18,7 @@ def setup(game):
     for player in game["players"]:
         p = game["players"][player]
         output(player, "{} is a {}".format(player, p["role"]))
+        output(player, "{} is <b>{}</b>".format(player, p["team"]))
         p["roleblocked"] = False
         p["alive"] = True
         p["vote"] = player
