@@ -56,6 +56,13 @@ def role(game, player):
         <select id="target">{}</select>
         <button onclick="sendRoleblock()">Submit Roleblock</button>
         """.format("\n".join(option(x) for x in pl if game["players"][x]["alive"] and x not in p["all_rollblocks"] and x!=player))
+    elif p["role"] == "seer":
+        selector = """<select id="target">{}</select><br>""".format(all_players_options)
+        if game["day"]>0:
+            role_actions += """
+            <br>Submit a player to see the role of:{}<br>
+            <button onclick="sendSeer()">See</button>
+            """.format(selector)
     elif p["role"] == "priest":
         alive_selector = "<select>{}</select><br>".format(alive_options)
         size = int(len([x for x in pl if game["players"][x]["alive"]])*.2+.99)
@@ -106,6 +113,9 @@ def player_info(game, player, messages):
     """.format(role(game,player), display(game,player,messages))
 
 def main_page(game, player, messages): 
+    votable=[x for x in player_list(game) if game["players"][x]["alive"]]
+    if game["day"]<2:
+        votable+=["no-execution"]
     h="""
     <html>
     <head>
@@ -133,5 +143,5 @@ def main_page(game, player, messages):
       </div>
     </body>
     </html>
-    """.format(player, "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"]), player_info(game, player, messages))
+    """.format(player, "\n".join(option(x) for x in votable), player_info(game, player, messages))
     return h

@@ -22,6 +22,8 @@ if action=="priest":
     command = action+" sinners "+d.getfirst("sinners")+" saints "+d.getfirst("saints")
 if action=="guess":
     command = action+" "+d.getfirst("target")
+if action=="seer":
+    command = action+" "+d.getfirst("target")
 (game, valid, messages) = mafia.save_game(game_id, mafia.get_game(game_id)+([player+" "+command] if command else []))
 print("Content-type: text/html\n")
 print(create_page.player_info(game,player,messages))

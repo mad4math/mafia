@@ -52,3 +52,9 @@ function sendInfallible() {
   params = gg() + "&action=guess&target="+getInput("target");
   xhttp.send(params);
 }
+
+function sendSeer() {
+  var xhttp = setupRequest();
+  params = gg()+"&action=seer&target="+getInput("target")
+  xhttp.send(params);
+}

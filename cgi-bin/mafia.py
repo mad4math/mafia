@@ -103,7 +103,7 @@ def rollover(game):
     game["votes"] += [votes]
     if game["day"] > 0:
         d = game["day"]
-        max_vote_players = [player for player in g if g[player]["alive"]] + ["no execution"]
+        max_vote_players = [player for player in g if g[player]["alive"]] + ["no-execution"]
         while d > 0 and len(max_vote_players) > 1:
             max_vote_this_day = max_vote_players
             max_vote = 0
@@ -119,7 +119,7 @@ def rollover(game):
             d -= 1
             output("test", max_vote_players)
         execution = sorted(max_vote_players)[0]
-        if execution!="no execution":
+        if execution!="no-execution":
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
     for player in alive:
@@ -533,7 +533,7 @@ def do_command(game, command):
             check_valid_player(game, l[2])
             infallible_investigate(game, player, l[2])
         elif l[1] == "vote":
-            if l[2]!="no execution":
+            if l[2]!="no-execution":
                 check_valid_player(game, l[2])
             submit_vote(game, player, l[2])
         elif l[1] == "frame":
