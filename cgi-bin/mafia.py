@@ -462,6 +462,8 @@ def do_command(game, command):
         player is a mafia, using a trap on player x as role y
     [player] untrap [x]
         player is a mafia, untrap x.
+    [player] drop
+        remove player from the game
     """
     l = shlex.split(command)
     if l[0]=="setup":
@@ -570,7 +572,8 @@ def do_command(game, command):
             untrap(game, player, l[2])
         elif l[1] == "intro":
             game["players"][l[0]]["intro"]=1
-
+        elif l[1] == "drop":
+            game["players"][l[0]]["alive"]=0
         return (game, command)
 
 if __name__=="__main__":
