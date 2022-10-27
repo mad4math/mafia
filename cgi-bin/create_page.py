@@ -24,7 +24,7 @@ def role(game, player):
         if p["team"] == "mafia":
             m = """
             with result <select id="w">{}</select>
-            """.format(all_players_options)
+            """.format(option("")+all_players_options)
             mf = """
             <br>
             Frames left: {}<br>
@@ -38,6 +38,11 @@ def role(game, player):
         """.format(p["investigations"],all_players_options,all_players_options,deaths_options,m,mf)
     elif p["role"] == "prophet":
         deaths_options_a = "\n".join(option(x) for x in game["deaths"] if (x in p["investigations"] and p["investigations"][x]))
+        m = ""
+        if p["team"] == "mafia":
+            m = """
+            with result <select id="w">{}</select>
+            """.format(option("")+all_players_options)
         role_actions += """
                 Submit a prophecy:<br>(Note: investigations from prophecies will be granted manually by GMs because locations can be ambiguous sometimes)<br>
         You predict that <select id=victim>{}</select> will die at (time) <input id="time"> in (location) <input id="place">
@@ -47,10 +52,10 @@ def role(game, player):
         {}
         <br>
         Submit an investigation:
-        <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>
+        <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
         <button onclick="sendInvestigation()">Investigate</button>
         """.format(alive_options, "\n<br>".join("<b>"+target+": "+str(p["investigations"][target])+"</b>" for target in p["investigations"]),
-         all_players_options, all_players_options, deaths_options_a)
+         all_players_options, all_players_options, deaths_options_a, m)
     elif p["role"] == "roleblocker":
         role_actions += """
                 Submit a roleblock:<br>
