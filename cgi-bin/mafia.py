@@ -89,7 +89,7 @@ with open("players.txt") as file:
 def rollover(game):
     r = []
     g = game["players"]
-    #do the execution
+    #count the votes, and limit the saints and sinner lists.
     votes = {}
     alive = [player for player in g if g[player]["alive"]]
     for player in alive:
@@ -103,6 +103,7 @@ def rollover(game):
         else:
             votes[vote] += [player]
     game["votes"] += [votes]
+    #determine who is executed, and publish the results
     if game["day"] > 0:
         d = game["day"]
         max_vote_players = [player for player in g if g[player]["alive"]] + ["no-execution"]
@@ -124,6 +125,15 @@ def rollover(game):
         if execution!="no-execution":
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
+        for player in alive:
+            if player in votes:
+                output("public", "{} was voted for by {}".format(player, ", ".join(votes[player])))
+            p["vote"] = player
+
+    #submit roleblocks for roleblockers at day start, because their action is mandatory.
+    #also set all trapped players to roleblocked
+    #roleblocks are gone, so this section is commented out
+    """
     for player in alive:
         p = g[player]
         if p["role"] == "roleblocker" and p["tomorrow"] not in alive:
@@ -139,10 +149,9 @@ def rollover(game):
             p["roleblocked"] = False
         else:
             p["roleblocked"] = True
-        if game["day"]>0 and player in votes:
-            output("public", "{} was voted for by {}".format(player, ", ".join(votes[player])))
-        p["vote"] = player
+    """
     alive = [player for player in g if g[player]["alive"]]
+    #perform the upkeep for all living players
     for player in alive:
         p = g[player]
         if p["role"] == "investigator":
@@ -183,9 +192,7 @@ def rollover(game):
                 p["uses"] = 0
             elif p["role"] == "prophet":
                 p["tomorrow"] = ""
-        if p["roleblocked"]:
             output(player, "{} is roleblocked for day {}".format(player, game["day"]))
-        p["vote"] = player
     return r + ["rollover"]
 
 def kill(game, killer, victim, time, location):
@@ -195,7 +202,7 @@ def kill(game, killer, victim, time, location):
     game["players"][victim]["alive"] = False
     for player in game["players"]:
         p = game["players"][player]
-        if p["role"] == "priest":
+        if p["role"] == "priest" and player not in game["mafia"]["trapped"]:
             if killer in p["today"]["saints"] and victim in p["today"]["sinners"]:
                 game["deaths"][victim]["killer"] = ""
                 p["role"] = "none"
@@ -234,8 +241,14 @@ def untrap(game, player, target):
 
 def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, correctPerson):
     game["players"][player]["investigations"][kill] = 2*(correctPerson+ correctPlace + correctTime)
-    l = (["time"] if correctTime else []) + (["location"] if correctPlace else []) + (["person"] if correctPerson else []) 
-    output(player, "{} correctly identified the correct {} for the death of {}".format(player, ", ".join(l), kill))
+    l = (["time"] if correctTime else []) + (["location"] if correctPlace else []) + (["person"] if correctPerson else [])
+    if player in game["mafia"]["trapped"]:
+        game["players"][player]["investigations"][kill] = 0
+        l = []
+    if l:
+        output(player, "{} correctly identified the correct {} for the death of {}".format(player, ", ".join(l), kill))
+    else:
+        output(player, "{} didn't predict anything correctly about the death of {}".format(player,kill))
 
 def submit_rollblock(game, player, target):
 
@@ -293,7 +306,8 @@ def see(game, player, target):
         raise IllegalAction("You already used your seer ability today!")
     else:
         game["players"][player]["uses"] -= 1
-        output(player, "{} is a {}".format(target, game["players"][target]["role"]))
+        result = random.choice(roles) if player in game["mafia"]["trapped"] else game["players"][target]["role"]
+        output(player, "{} is a {}".format(target, result))
 def infallible_investigate(game, player, guess):
     kill = game["players"][player]["partner"]
     if game["players"][player]["role"]!="gay knight" or game["players"][kill]["alive"] or game["players"][player]["guesses"]<1:
@@ -336,6 +350,10 @@ def investigate(game,player, x, y, z, w=None):
         raise IllegalAction("Can't investigate because you aren't an investigator or a prophet!")
 def do_investigation(game, player, x, y, z, w):
     """doesn't check for legality, subroutine of investigate"""
+    if player in game["mafia"]["trapped"]:
+        w = random.choice([x,y])
+        output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
+        return (x,y,z,w)
     legal = []
     if game["deaths"][z]["killer"] == x:
         legal = [y]
@@ -509,7 +527,7 @@ def do_command(game, command):
             check_valid_player(game, l[2])
             see(game, player, l[2])
         elif l[1] == "kill":
-            if l[3]!="at" or l[5]!="in":
+            if len(l) < 7 or l[3]!="at" or l[5]!="in":
                 raise IllegalAction("bad syntax: "+command)
             check_valid_player(game, l[2])
             if game["players"][l[2]]["alive"]:

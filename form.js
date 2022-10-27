@@ -52,9 +52,19 @@ function sendInfallible() {
   params = gg() + "&action=guess&target="+getInput("target");
   xhttp.send(params);
 }
-
 function sendSeer() {
   var xhttp = setupRequest();
-  params = gg()+"&action=seer&target="+getInput("target")
+  params = gg()+"&action=seer&target="+getInput("target");
   xhttp.send(params);
+}
+function sendTrap() {
+  var xhttp = setupRequest();
+  params = gg()+"&action=trap&target="+getInput("target")+"&role="+getInput("trap-guess");
+  xhttp.send(params);
+}
+function sendActionWithTarget(action) {
+  var xhttp = setupRequest();
+  params = gg()+"&action="+action+"&target="+getInput("target");
+  xhttp.send(params);
+
 }

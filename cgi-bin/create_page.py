@@ -1,4 +1,4 @@
-
+import mafia
 
 option = lambda x:"<option value={}>{}</option>".format(x,x)
 player_list = lambda game:sorted(game["players"])
@@ -54,14 +54,14 @@ def role(game, player):
         role_actions += """
                 Submit a roleblock:<br>
         <select id="target">{}</select>
-        <button onclick="sendRoleblock()">Submit Roleblock</button>
+        <button onclick="sendActionWithTarget('roleblock')">Submit Roleblock</button>
         """.format("\n".join(option(x) for x in pl if game["players"][x]["alive"] and x not in p["all_rollblocks"] and x!=player))
     elif p["role"] == "seer":
         selector = """<select id="target">{}</select><br>""".format(all_players_options)
-        if game["day"]>0:
+        if game["day"]>0 and p["uses"]>0:
             role_actions += """
-            <br>Submit a player to see the role of:{}<br>
-            <button onclick="sendSeer()">See</button>
+            Submit a player to see the role of:{}<br>
+            <button onclick="sendActionWithTarget('seer')">See</button>
             """.format(selector)
     elif p["role"] == "priest":
         alive_selector = "<select>{}</select><br>".format(alive_options)
@@ -91,12 +91,24 @@ def role(game, player):
                 a += """
                 Who do you think did it? You have <b>{}</b> guesses left.<br>
                 <select id="target">{}</select>
-                <button onclick="sendInfallible()"> Submit </button>
+                <button onclick="sendActionWithTarget('guess')"> Submit </button>
                 """.format(p["guesses"],all_players_options)
 
         role_actions += a
 
     return role_actions
+def faction(game, player):
+    alive_options = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"])
+    role_options = "\n".join(option(x) for x in mafia.roles)
+    if game["players"][player]["team"]=="mafia":
+        a = """
+        You are the mafia! The mafia team is <b>{}</b><br>
+        Use a trap: Trap <select id="target">{}</select> as <select id="trap-guess">{}</select> 
+            <button onclick="sendTrap()">Trap!</button>
+        """.format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"), alive_options, role_options)
+        return a
+    else:
+        return ""
 def display(game, player, messages):
     allowed = [player, "public", "error"]
     if game["players"][player]["team"]=="mafia":
@@ -116,12 +128,15 @@ def player_info(game, player, messages):
       <button onClick=sendVote()>Send Vote</button>
       Currently voting for: <b>{}</b>
     </div>
+    <div id="faction-abilities">
+    {}
+    </div>
     <div id="role-abilities">
     {}
     </div>
     <h4> Game Log </h4>
     <div id="display" >{}</div>
-    """.format("\n".join(option(x) for x in votable), game["players"][player]["vote"],role(game,player), display(game,player,messages))
+    """.format("\n".join(option(x) for x in votable), game["players"][player]["vote"],faction(game,player),role(game,player), display(game,player,messages))
 
 def main_page(game, player, messages): 
     h="""
