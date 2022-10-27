@@ -39,6 +39,7 @@ def setup(game):
             p["correct"] = False
         elif p["role"] == "investigator":
             p["frames"] = 1
+            p["investigations"] = 0
     output("mafia","{} are the mafia ".format(",".join(x for x in game["players"] if game["players"][x]["team"]=="mafia")))
 
 
