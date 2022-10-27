@@ -14,7 +14,7 @@ def setup(game):
     game["deaths"] = {}
     game["votes"] = []
     game["day"] = 0
-    game["mafia"] = {"traps":2, "trapped":[]}
+    game["mafia"] = {"traps":2, "trapped":[], "untrappable":[]}
     for player in game["players"]:
         p = game["players"][player]
         output(player, "{} is a {}".format(player, p["role"]))
@@ -223,6 +223,8 @@ def trap(game, player, target, role):
         raise IllegalAction("Only mafia can set traps!")
     if game["mafia"]["traps"] < 1:
         raise IllegalAction("Mafia are out of traps!")
+    if player in game["mafia"]["untrappable"]:
+        raise IllegalAction("Mafia can't trapped someone they've used Seer on!")
     if game["players"][target]["role"] == role:
         game["mafia"]["trapped"] += [target]
         output("mafia", "You successfully trapped {} as {}".format(target, role))
@@ -306,6 +308,7 @@ def see(game, player, target):
         raise IllegalAction("You already used your seer ability today!")
     else:
         game["players"][player]["uses"] -= 1
+        game["mafia"]["untrappable"] += [player]
         result = random.choice(roles) if player in game["mafia"]["trapped"] else game["players"][target]["role"]
         output(player, "{} is a {}".format(target, result))
 def infallible_investigate(game, player, guess):

@@ -103,7 +103,7 @@ def faction(game, player):
     if game["players"][player]["team"]=="mafia":
         a = """
         You are the mafia! The mafia team is <b>{}</b><br>
-        Use a trap: Trap <select id="target">{}</select> as <select id="trap-guess">{}</select> 
+        Use a trap: Trap <select id="trap-target">{}</select> as <select id="trap-guess">{}</select> 
             <button onclick="sendTrap()">Trap!</button>
         """.format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"), alive_options, role_options)
         return a
