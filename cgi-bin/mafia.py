@@ -209,9 +209,9 @@ def kill(game, killer, victim, time, location):
                 output(player, "A saint killed {}! You lose your role powers for the rest of game, and the culprit will be innocent for all investigations.".format(victim))
             elif killer in p["today"]["sinners"] and victim in p["today"]["saints"]:
                 output(player, "A sinner killed {}!".format(victim))
-            elif killer in p["today"]["saints"]:
+            elif victim in p["today"]["saints"]:
                 output(player, "{} wasn't killed by any of {}".format(victim,p["today"]["sinners"]))
-            elif killer in p["today"]["sinners"]:
+            elif victim in p["today"]["sinners"]:
                 output(player, "{} wasn't killed by any of {}".format(victim,p["today"]["saints"]))
 
     output("public", "{} died in {} at {}".format(victim,location,time))
@@ -240,13 +240,13 @@ def untrap(game, player, target):
 
 
 def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, correctPerson):
-    game["players"][player]["investigations"][kill] = 2*(correctPerson+ correctPlace + correctTime)
+    game["players"][player]["investigations"][kill] = 2*(correctPerson + correctPlace + correctTime)
     l = (["time"] if correctTime else []) + (["location"] if correctPlace else []) + (["person"] if correctPerson else [])
     if player in game["mafia"]["trapped"]:
         game["players"][player]["investigations"][kill] = 0
         l = []
     if l:
-        output(player, "{} correctly identified the correct {} for the death of {}".format(player, ", ".join(l), kill))
+        output(player, "{} correctly identified the correct {} for the death of {}. You now have {} investigations you can use on this death".format(player, ", ".join(l), kill, game["players"][player]["investigations"][kill]))
     else:
         output(player, "{} didn't predict anything correctly about the death of {}".format(player,kill))
 
