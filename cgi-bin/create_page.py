@@ -104,18 +104,26 @@ def display(game, player, messages):
     return "<br>\n".join(x for x in messages if any((y+":") in x for y in allowed))
 
 def player_info(game, player, messages):
+    votable=[x for x in player_list(game) if game["players"][x]["alive"]]
+    if game["day"]<2:
+        votable+=["no-execution"]
     return """
+              <div>
+                Vote for a player to execute:<br>
+                <select id="vote">
+                {}
+                </select>
+      <button onClick=sendVote()>Send Vote</button>
+      Currently voting for: <b>{}</b>
+    </div>
     <div id="role-abilities">
     {}
     </div>
     <h4> Game Log </h4>
     <div id="display" >{}</div>
-    """.format(role(game,player), display(game,player,messages))
+    """.format("\n".join(option(x) for x in votable), game["players"][player]["vote"],role(game,player), display(game,player,messages))
 
 def main_page(game, player, messages): 
-    votable=[x for x in player_list(game) if game["players"][x]["alive"]]
-    if game["day"]<2:
-        votable+=["no-execution"]
     h="""
     <html>
     <head>
@@ -130,18 +138,11 @@ def main_page(game, player, messages):
                 game ID:<input id="id" value="fall22-01" disabled><br>
                 username:<input id="player" value="{}" disabled><br>
               </div>
-              <div>
-                Vote for a player to execute:<br>
-                <select id="vote">
-                {}
-                </select>
-      <button onClick=sendVote()>Send Vote</button>
-    </div>
       <div id="player-info">
       {}
     </div>
       </div>
     </body>
     </html>
-    """.format(player, "\n".join(option(x) for x in votable), player_info(game, player, messages))
+    """.format(player, player_info(game, player, messages))
     return h
