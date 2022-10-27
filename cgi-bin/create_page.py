@@ -6,7 +6,7 @@ player_list = lambda game:sorted(game["players"])
 def role(game, player):
     p = game["players"][player]
     pl = player_list(game)
-    role_actions = "You are a {}<br>".format(p["role"])
+    role_actions = "You are a <b>{}</b><br>".format(p["role"])
     if not p["intro"]:
         return "Please post your intro on <a href=https://mafia.csail.mit.edu/22-02-town-square/m/s3coEzHXqvaFeeESY>this thread</a>"
     if p["roleblocked"] and p["role"]!="gay knight":
@@ -37,6 +37,7 @@ def role(game, player):
         <button onClick=sendInvestigation()>Investigate</button>{}
         """.format(p["investigations"],all_players_options,all_players_options,deaths_options,m,mf)
     elif p["role"] == "prophet":
+        deaths_options_a = "\n".join(option(x) for x in game["deaths"] if (x in p["investigations"] and p["investigations"][x]))
         role_actions += """
                 Submit a prophecy:<br>(Note: investigations from prophecies will be granted manually by GMs because locations can be ambiguous sometimes)<br>
         You predict that <select id=victim>{}</select> will die at (time) <input id="time"> in (location) <input id="place">
@@ -49,7 +50,7 @@ def role(game, player):
         <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>
         <button onclick="sendInvestigation()">Investigate</button>
         """.format(alive_options, "\n<br>".join("<b>"+target+": "+str(p["investigations"][target])+"</b>" for target in p["investigations"]),
-         all_players_options, all_players_options, deaths_options)
+         all_players_options, all_players_options, deaths_options_a)
     elif p["role"] == "roleblocker":
         role_actions += """
                 Submit a roleblock:<br>
@@ -57,10 +58,10 @@ def role(game, player):
         <button onclick="sendActionWithTarget('roleblock')">Submit Roleblock</button>
         """.format("\n".join(option(x) for x in pl if game["players"][x]["alive"] and x not in p["all_rollblocks"] and x!=player))
     elif p["role"] == "seer":
-        selector = """<select id="target">{}</select><br>""".format(all_players_options)
+        selector = """<select id="target">{}</select>""".format(all_players_options)
         if game["day"]>0 and p["uses"]>0:
             role_actions += """
-            Submit a player to see the role of:{}<br>
+            Submit a player to see the role of:{}
             <button onclick="sendActionWithTarget('seer')">See</button>
             """.format(selector)
     elif p["role"] == "priest":
