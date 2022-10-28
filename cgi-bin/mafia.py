@@ -125,9 +125,9 @@ def rollover(game):
         if execution!="no-execution":
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
+        for player in votes:
+            output("public", "{} was voted for by {}".format(player, ", ".join(votes[player])))
         for player in alive:
-            if player in votes:
-                output("public", "{} was voted for by {}".format(player, ", ".join(votes[player])))
             p["vote"] = player
 
     #submit roleblocks for roleblockers at day start, because their action is mandatory.
