@@ -33,6 +33,7 @@ def setup(game):
         elif p["role"] == "priest":
             p["tomorrow"] = {"sinners":[], "saints":[]}
             p["today"] = {"sinners":[], "saints":[]}
+            p["active"] = True
         elif p["role"] == "gay knight":
             p["dying"] = False
             p["guesses"] = 2
@@ -202,10 +203,11 @@ def kill(game, killer, victim, time, location):
     game["players"][victim]["alive"] = False
     for player in game["players"]:
         p = game["players"][player]
-        if p["role"] == "priest" and player not in game["mafia"]["trapped"]:
+        if p["role"] == "priest" and player not in game["mafia"]["trapped"] and p["active"]:
             if killer in p["today"]["saints"] and victim in p["today"]["sinners"]:
                 game["deaths"][victim]["killer"] = ""
-                p["role"] = "none"
+                #p["role"] = "none"
+                p["active"] = False
                 output(player, "A saint killed {}! You lose your role powers for the rest of game, and the culprit will be innocent for all investigations.".format(victim))
             elif killer in p["today"]["sinners"] and victim in p["today"]["saints"]:
                 output(player, "A sinner killed {}!".format(victim))
@@ -223,7 +225,7 @@ def trap(game, player, target, role):
         raise IllegalAction("Only mafia can set traps!")
     if game["mafia"]["traps"] < 1:
         raise IllegalAction("Mafia are out of traps!")
-    if player in game["mafia"]["untrappable"]:
+    if target in game["mafia"]["untrappable"]:
         raise IllegalAction("Mafia can't trapped someone they've used Seer on!")
     if game["players"][target]["role"] == role:
         game["mafia"]["trapped"] += [target]
@@ -299,7 +301,7 @@ def submit_vote(game, player, vote):
     game["players"][player]["vote"] = vote
     output(player, "{} voted for {}".format(player, vote))
 
-def see(game, player, target):
+def see(game, player, target, result=None):
     if game["players"][player]["roleblocked"]:
         raise IllegalAction("Can't seer because you are roleblocked!")
     if game["players"][player]["role"]!="seer":
@@ -308,9 +310,17 @@ def see(game, player, target):
         raise IllegalAction("You already used your seer ability today!")
     else:
         game["players"][player]["uses"] -= 1
-        game["mafia"]["untrappable"] += [player]
-        result = random.choice(roles) if player in game["mafia"]["trapped"] else game["players"][target]["role"]
-        output(player, "{} is a {}".format(target, result))
+        if game["players"][player]["team"] == "mafia":
+            game["mafia"]["untrappable"] += [target]
+        possible_results = roles if player in game["mafia"]["trapped"] else [game["players"][target]["role"]]
+        if result==None:
+            result = random.choice(roles) if player in game["mafia"]["trapped"] else game["players"][target]["role"]
+        if result not in possible_results:
+            raise IllegalAction("{} is not a possible result for {} to see as the role of {}".format(result, player, target))
+        else:
+            output(player, "{} is a {}".format(target, result))
+            return result
+
 def infallible_investigate(game, player, guess):
     kill = game["players"][player]["partner"]
     if game["players"][player]["role"]!="gay knight" or game["players"][kill]["alive"] or game["players"][player]["guesses"]<1:
@@ -530,7 +540,11 @@ def do_command(game, command):
             submit_rollblock(game, player, l[2])
         elif l[1] == "seer":
             check_valid_player(game, l[2])
-            see(game, player, l[2])
+            if len(l)>3:
+                see(game, player, l[2], result=l[4])
+            else:
+                result = see(game, player, l[2])
+                command = command + " as "+result
         elif l[1] == "kill":
             if len(l) < 7 or l[3]!="at" or l[5]!="in":
                 raise IllegalAction("bad syntax: "+command)

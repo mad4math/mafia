@@ -72,14 +72,17 @@ def role(game, player):
     elif p["role"] == "priest":
         alive_selector = "<select>{}</select><br>".format(alive_options)
         size = int(len([x for x in pl if game["players"][x]["alive"]])*.2+.99)
-        role_actions += """
-                Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored)<br>
-        Sinners:<div id="sinners">
-        {}
-        </div>Saints:<div id="saints">
-        {}
-        </div><button onclick="sendPriestList()">Submit lists</button>
-        """.format(alive_selector*size,alive_selector*size)
+        if p["active"]:
+            role_actions += """
+                    Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored)<br>
+            Sinners:<div id="sinners">
+            {}
+            </div>Saints:<div id="saints">
+            {}
+            </div><button onclick="sendPriestList()">Submit lists</button>
+            """.format(alive_selector*size,alive_selector*size)
+        else:
+            role_actions += """You lost your priestly role powers!"""
     elif p["role"] == "gay knight":
         a = """
         Your partner is {}.<br>
