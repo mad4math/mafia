@@ -31,6 +31,7 @@
            // Typical action to be performed when the document is ready:
                document.getElementById("command_box").value = xhttp.responseText.split("$")[0];
                document.getElementById("display").innerHTML = xhttp.responseText.split("$")[1];
+               count = xhttp.responseText.split("$")[2];
         }
     };
     xhttp.open("POST", "cgi-bin/save_admin.py", true);

@@ -544,7 +544,7 @@ def do_command(game, command):
                 see(game, player, l[2], result=l[4])
             else:
                 result = see(game, player, l[2])
-                command = command + " as "+result
+                command = command + " as \""+result+"\""
         elif l[1] == "kill":
             if len(l) < 7 or l[3]!="at" or l[5]!="in":
                 raise IllegalAction("bad syntax: "+command)
