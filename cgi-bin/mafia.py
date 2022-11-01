@@ -127,8 +127,11 @@ def rollover(game):
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
         for player in votes:
-            output("public", "{} was voted for by {}".format(player, ", ".join(votes[player])))
+            output("public", "{} was voted for by {}  ".format(player, ", ".join(votes[player])))
+        for player in votes:
+            output("testat", "@{} was voted for by {}  ".format(player, ", ".join("@"+x for x in votes[player])))
         for player in alive:
+            p = g[player]
             p["vote"] = player
 
     #submit roleblocks for roleblockers at day start, because their action is mandatory.
@@ -399,6 +402,7 @@ messages = []
 def output(audience, message):
     m = "{}: {}".format(audience, message)
     global messages
+    #messages += [{"a":audience, "m":message}]
     messages += [m]
     #print(m)
 
