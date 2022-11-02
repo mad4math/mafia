@@ -171,7 +171,7 @@ def rollover(game):
             p["tomorrow"] = ""
         elif p["role"] == "priest":
             p["today"] = p["tomorrow"]
-            if len(p["today"]["saints"])>0:
+            if len(p["today"]["saints"])>0 and p["active"]:
                 output(player, "{} priest lists for day {} are sinners: {} saints: {}".format(player, game["day"]+1, p["today"]["sinners"],p["today"]["saints"]))
         elif p["role"] == "vigilante":
             pass
