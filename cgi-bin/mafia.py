@@ -408,7 +408,10 @@ def output(audience, message):
 
 def get_game_file_location(game_id):
     with open("config.ini") as file:
-        return file.read().rstrip()+game_id+"/"
+        if game_id:
+            return file.read().rstrip()+game_id+"/"
+        else:
+            return file.read().rstrip()
 
 def get_game(game_id):
     with open(get_game_file_location(game_id)+"game_actions.txt") as file:
