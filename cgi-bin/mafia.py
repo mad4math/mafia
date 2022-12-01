@@ -3,6 +3,7 @@ import json
 import shlex
 import traceback
 import os
+import time
 roles = ["investigator","prophet","priest","vigilante","gay knight","seer"] #all the roles
 straight_roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles that aren't gay
 
@@ -495,8 +496,11 @@ def do_command(game, command):
         random.seed(l[1])
         return (game, command)
     elif l[0] == "rollover":
-        commands = "\n".join(rollover(game))
-        return (game, commands)
+        if len(l)==1 or int(l[1])<time.time():
+            commands = "\n".join(rollover(game))
+            return (game, commands)
+        else:
+            return (game, command)
     else:
         player = l[0]
         check_valid_player(game, player)

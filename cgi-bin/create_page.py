@@ -159,7 +159,7 @@ def main_page(game, player, messages):
     <body>
       <div style="width: 100%; overflow: hidden;">
         <div>
-                game ID:<input id="id" value="fall22-01" disabled><br>
+                game ID:<input id="id" value="fall22-02" disabled><br>
                 username:<input id="player" value="{}" disabled><br>
               </div>
       <div id="player-info">
