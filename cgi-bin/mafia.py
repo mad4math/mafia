@@ -207,7 +207,7 @@ def kill(game, killer, victim, time, location):
     game["players"][victim]["alive"] = False
     for player in game["players"]:
         p = game["players"][player]
-        if p["role"] == "priest" and player not in game["mafia"]["trapped"] and p["active"]:
+        if p["role"] == "priest" and player not in game["mafia"]["trapped"] and p["active"] and p["alive"]:
             if killer in p["today"]["saints"] and victim in p["today"]["sinners"]:
                 game["deaths"][victim]["killer"] = ""
                 #p["role"] = "none"
