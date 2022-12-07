@@ -207,13 +207,13 @@ def kill(game, killer, victim, time, location):
     game["players"][victim]["alive"] = False
     for player in game["players"]:
         p = game["players"][player]
-        if p["role"] == "priest" and player not in game["mafia"]["trapped"] and p["active"] and p["alive"]:
-            if killer in p["today"]["saints"] and victim in p["today"]["sinners"]:
+        if p["role"] == "priest" and p["active"] and p["alive"]:
+            if killer in p["today"]["saints"] and victim in p["today"]["sinners"] and player not in game["mafia"]["trapped"]:
                 game["deaths"][victim]["killer"] = ""
                 #p["role"] = "none"
                 p["active"] = False
                 output(player, "A saint killed {}! You lose your role powers for the rest of game, and the culprit will be innocent for all investigations.".format(victim))
-            elif killer in p["today"]["sinners"] and victim in p["today"]["saints"]:
+            elif killer in p["today"]["sinners"] and victim in p["today"]["saints"] and player not in game["mafia"]["trapped"]:
                 output(player, "A sinner killed {}!".format(victim))
             elif victim in p["today"]["saints"]:
                 output(player, "{} wasn't killed by any of {}".format(victim,p["today"]["sinners"]))
