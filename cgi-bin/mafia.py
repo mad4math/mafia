@@ -315,12 +315,10 @@ def submit_priest_list(game, player, sinners, saints):
     else:
         if sinners:
             game["players"][player]["tomorrow"]["sinners"]=sinners
-            game["players"][buddy]["tomorrow"]["sinners"]=sinners
             output(player, "{} submitted lists of sinners: {} for day {}".format(player,sinners, game["day"]+1))
             output(buddy, "{} submitted lists of sinners: {} for day {}".format(player,sinners, game["day"]+1))
         if saints:
             game["players"][player]["tomorrow"]["saints"]=saints
-            game["players"][buddy]["tomorrow"]["sinners"]=saints
             output(player, "{} submitted lists of saint: {} for day {}".format(player,saints, game["day"]+1))
             output(buddy, "{} submitted lists of saint: {} for day {}".format(player,saints, game["day"]+1))
 
@@ -655,7 +653,7 @@ def json_to_command(json_obj):
             else:
                 raise ValueError('Invalid priest list syntax')
         elif action == 'predicts':
-            return player + ' predicts ' + json_obj['prophecy']
+            return player + ' predicts "' + json_obj['prophecy'] + '"'
         elif action == 'roleblock':
             return player + ' roleblock ' + json_obj['target']
         elif action == 'seer':
@@ -664,7 +662,7 @@ def json_to_command(json_obj):
                 command += 'result ' + json_obj['result'] + ' '
             return command
         elif action == 'kill':
-            return player + ' kill ' + json_obj['target'] + ' at ' + json_obj['time'] + ' in ' + json_obj['location']
+            return player + ' kill ' + json_obj['target'] + ' at ' + json_obj['time'] + ' in "' + json_obj['location'] + '"'
         elif action == 'predicted':
             command = player + ' predicted '
             if json_obj['correctTime']:

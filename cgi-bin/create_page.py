@@ -37,11 +37,12 @@ def role(game, player):
         <button onClick=sendInvestigation()>Investigate</button>{}
         """.format(p["investigations"],all_players_options,all_players_options,deaths_options,m,mf)
     elif p["role"] == "vigilante":
-        role_actions += """
-        Submit an investigation: (You have <b>{}</b> left today.)<br>
-        <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
-        <button onClick=sendInvestigation()>Investigate</button>{}
-        """.format(p["investigations"],all_players_options,all_players_options,deaths_options,m,mf)
+        if mafia.get_alive_buddy(game, player) != player:
+            role_actions += """
+            Submit an investigation: (You have <b>{}</b> left today.)<br>
+            <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
+            <button onClick=sendInvestigation()>Investigate</button>{}
+            """.format(p["investigations"],all_players_options,all_players_options,deaths_options)
 
     elif p["role"] == "prophet":
         deaths_options_a = "\n".join(option(x) for x in game["deaths"] if (x in p["investigations"] and p["investigations"][x]))

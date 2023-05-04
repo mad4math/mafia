@@ -31,8 +31,8 @@ function sendInvestigation() {
 }
 function sendProphecy() {
   var xhttp = setupRequest();
-  params = "id="+document.getElementById("id").value+"&player="+document.getElementById("player").value+"&action=predicts&prophecy=\""+
-  document.getElementById("victim").value+" will die at "+document.getElementById("time").value+" in "+document.getElementById("place").value+"\"";
+  params = "id="+document.getElementById("id").value+"&player="+document.getElementById("player").value+"&action=predicts&prophecy="+
+  document.getElementById("victim").value+" will die at "+document.getElementById("time").value+" in "+document.getElementById("place").value;
   xhttp.send(params);
 }
 function sendRoleblock() {
