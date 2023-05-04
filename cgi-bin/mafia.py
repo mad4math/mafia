@@ -487,19 +487,26 @@ def commands_to_json(commands):
 
 
 def load_game(game_id):
-    return do_commands(get_game(game_id))
+    g = get_game(game_id)
+    now = datetime.datetime.now()
+    past = [x for x in g if x["time"] <= str(now)]
+    future = [x for x in g if x["time"] > str(now)]
+    return do_commands(past)
 
 def json_to_commands(commands):
     return "\n".join(x["time"]+" "+json_to_command(x["command"]) for x in commands)
 
 
 def save_game(game_id, actions):
-    (game, valid, messages) = do_commands(actions)
+    now = datetime.datetime.now()
+    past = [x for x in actions if x["time"] <= str(now)]
+    future = [x for x in actions if x["time"] > str(now)]
+    (game, valid, messages) = do_commands(past)
     with open(get_game_file_location(game_id)+"game_actions.txt","w") as file:
-        file.write(json.dumps(valid))
+        file.write(json.dumps(valid + future))
         #for line in valid:
         #    file.write(line+"\n")
-    return (game, valid, messages)
+    return (game, valid + future, messages)
 
 def check_valid_player(game,player):
     if player not in game["players"]:
@@ -507,7 +514,11 @@ def check_valid_player(game,player):
 
 import datetime
 def run_commands_and_save(game_id, commands):
-    return save_game(game_id, get_game(game_id)+ [{"time":str(datetime.datetime.now()), "command":command} for command in commands])
+    g = get_game(game_id)
+    now = datetime.datetime.now()
+    past = [x for x in g if x["time"] <= str(now)]
+    future = [x for x in g if x["time"] > str(now)]
+    return save_game(game_id, past + [{"time":str(datetime.datetime.now()), "command":command} for command in commands] + future)
 
 def do_commands(commands):
     """
