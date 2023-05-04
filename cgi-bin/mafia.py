@@ -642,7 +642,7 @@ def json_to_command(json_obj):
             command = player + ' investigate ' + json_obj['suspect1'] + ' ' + json_obj['suspect2'] + ' '
             command += 'kill ' + json_obj['kill']
             if 'result' in json_obj:
-                command += 'result ' + json_obj['result'] + ' '
+                command += ' result ' + json_obj['result'] + ' '
             return command
         elif action == 'priest':
             mode = json_obj['mode']
@@ -657,9 +657,9 @@ def json_to_command(json_obj):
         elif action == 'roleblock':
             return player + ' roleblock ' + json_obj['target']
         elif action == 'seer':
-            command = player + ' seer ' + json_obj['target'] + ' '
+            command = player + ' seer ' + json_obj['target']
             if 'result' in json_obj:
-                command += 'result ' + json_obj['result'] + ' '
+                command += ' result ' + json_obj['result'] + ' '
             return command
         elif action == 'kill':
             return player + ' kill ' + json_obj['target'] + ' at ' + json_obj['time'] + ' in "' + json_obj['location'] + '"'
