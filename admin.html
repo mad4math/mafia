@@ -6,6 +6,7 @@
 <body>
   <script>
     var count;
+    var players;
     function loadGame() {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
@@ -14,6 +15,7 @@
                document.getElementById("command_box").value = xhttp.responseText.split("$")[0];
                document.getElementById("display").innerHTML = xhttp.responseText.split("$")[1];
                count = xhttp.responseText.split("$")[2];
+               players = xhttp.responseText.split("$")[3].split(",");
             }
         };
         xhttp.open("GET", "cgi-bin/load_admin.py?id="+document.getElementById("game_id").value, true);
@@ -32,6 +34,7 @@
                document.getElementById("command_box").value = xhttp.responseText.split("$")[0];
                document.getElementById("display").innerHTML = xhttp.responseText.split("$")[1];
                count = xhttp.responseText.split("$")[2];
+               players = xhttp.responseText.split("$")[3].replaceAll("\n","").split(",");
         }
     };
     xhttp.open("POST", "cgi-bin/save_admin.py", true);
@@ -39,16 +42,36 @@
     params = "id="+document.getElementById("game_id").value+"&count="+count+"&commands="+document.getElementById("command_box").value;
     xhttp.send(params);
     };
+    function addIntros() {
+        s = "";
+        for(var i=0;i<players.length;i++) {
+        s += "\n"+getCurrentDateTime() + " " + players[i] + " intro";
+    }
+        document.getElementById("command_box").value += s;
+    }
+    function getCurrentDateTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hour = String(now.getHours()).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+  const second = String(now.getSeconds()).padStart(2, '0');
+  const millisecond = String(now.getMilliseconds()).padStart(3, '0');
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
+}
+
   </script>
   <div style="width: 100%; overflow: hidden;">
     <div style="width 480px; float: left;">
-  game ID:<input id="game_id" value="fall22-02">
+  game ID:<input id="game_id" value="spring23-01">
   <button onClick=loadGame()>Load game</button>
   <a href="newgame.html">new game</a>
   <br>
   <textarea name="commands" id="command_box" rows="35" cols="65"></textarea>
   <br>
   <button onClick=updateGame()>Update game</button>
+  <button onClick=addIntros()>Add all intros</button>
   </div>
   <div id="display" style="margin-left:500px;"></div>
   </div>

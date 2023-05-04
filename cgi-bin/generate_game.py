@@ -5,6 +5,7 @@ import cgi
 import cgitb
 import os
 import create_page
+import datetime
 cgitb.enable()
 
 
@@ -26,6 +27,7 @@ game_id = d.getfirst("game_id")
 player_list = [x.rstrip() for x in d.getfirst("players").split("\n")]
 mafia_count = d.getfirst("mafia_count")
 generate_game(game_id,player_list,mafia_count)
+(game, valid, messages) = mafia.save_game(game_id, [{"time":str(datetime.datetime.now()), "command":{"action":"setup", "name":game_id}}])
 
 print("Content-type: text/html\n")
 print("""<meta http-equiv="Refresh" content="0; url='../admin.html'" />""")

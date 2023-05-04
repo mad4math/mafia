@@ -40,11 +40,16 @@ function sendRoleblock() {
   params = gg()+"&action=roleblock&target="+getInput("target");
   xhttp.send(params);
 }
-function sendPriestList() {
+function sendPriestSinnersList() {
   var xhttp = setupRequest();
   sinners = Array.from(document.getElementById("sinners").getElementsByTagName("select")).map(x => x.value).join(" ");
+  params = gg()+"&action=priest&sinners="+sinners;
+  xhttp.send(params)
+}
+function sendPriestSaintsList() {
+  var xhttp = setupRequest();
   saints = Array.from(document.getElementById("saints").getElementsByTagName("select")).map(x => x.value).join(" ");
-  params = gg()+"&action=priest&sinners="+sinners+"&saints="+saints;
+  params = gg()+"&action=priest&saints="+saints;
   xhttp.send(params)
 }
 function sendInfallible() {

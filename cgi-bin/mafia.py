@@ -4,7 +4,7 @@ import shlex
 import traceback
 import os
 import time
-roles = ["investigator","prophet","priest","vigilante","gay knight","seer"] #all the roles
+roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles
 straight_roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles that aren't gay
 
 def load_gamestate(game_file):
@@ -17,11 +17,12 @@ def setup(game):
     game["day"] = 0
     game["mafia"] = {"traps":2, "trapped":[], "untrappable":[]}
     for player in game["players"]:
+        game["players"][player]["alive"] = True
+    for player in game["players"]:
         p = game["players"][player]
         output(player, "{} is a {}".format(player, p["role"]))
         output(player, "{} is <b>{}</b>".format(player, p["team"]))
         p["roleblocked"] = False
-        p["alive"] = True
         p["vote"] = player
         if p["role"] == "prophet":
             p["tomorrow"] = ""
@@ -42,6 +43,8 @@ def setup(game):
         elif p["role"] == "investigator":
             p["frames"] = 1
             p["investigations"] = 0
+        elif p["role"] == "vigilante" and get_alive_buddy(game, player) != player:
+            p["investigations"] = 1
     output("mafia","{} are the mafia ".format(",".join(x for x in game["players"] if game["players"][x]["team"]=="mafia")))
 
 
@@ -55,19 +58,31 @@ def generate_players(players,mafia):
     print(s)
     last_gay = None
     result = {}
-    while not result or last_gay:
+    while not result:# or last_gay:
         random.shuffle(players)
         result = {}
         last_gay = None
         m = mafia
         for p in players:
             result[p] ={}
+            result[p]["buddy"]=""
             if m>0:
                 result[p]["team"]="mafia"
                 role = random.choice(roles+straight_roles)
+                m -= 1
             else:
                 result[p]["team"]="town"
-                role = random.choice(roles)
+                if last_gay:
+                    result[p]["buddy"] = last_gay
+                    result[last_gay]["buddy"] = p
+                    role = result[last_gay]["role"]
+                    if role == "priest":
+                        result[p]["mode"] = "sinners"
+                        result[last_gay]["mode"] = "saints"
+                    last_gay = None
+                else:
+                    last_gay = p
+                    role = random.choice(roles)
             if role == "gay knight":
                 if last_gay==None:
                     last_gay = p
@@ -77,7 +92,6 @@ def generate_players(players,mafia):
                     last_gay=None
             result[p]["role"]=role
             result[p]["intro"]=0
-            m -= 1
     return result
 
 """
@@ -161,6 +175,11 @@ def rollover(game):
         p = g[player]
         if p["role"] == "investigator":
             p["investigations"] = 2
+        elif p["role"] == "vigilante":
+            if get_alive_buddy(game, player)!=player:
+                p["investigations"] = 1
+            else:
+                p["investigations"] = 0
         elif p["role"] == "prophet":
             p["today"] = p["tomorrow"]
             output(player, "{} predicts on day {} that {}".format(player, game["day"]+1, p["today"]))
@@ -200,6 +219,12 @@ def rollover(game):
             output(player, "{} is roleblocked for day {}".format(player, game["day"]))
     return r + ["rollover"]
 
+def get_alive_buddy(game, player):
+    if game["players"][player]["buddy"] and game["players"][game["players"][player]["buddy"]]["alive"]:
+        return game["players"][player]["buddy"]
+    else:
+        return player
+
 def kill(game, killer, victim, time, location):
     if game["players"][killer]["roleblocked"]:
         raise IllegalAction()
@@ -208,32 +233,41 @@ def kill(game, killer, victim, time, location):
     for player in game["players"]:
         p = game["players"][player]
         if p["role"] == "priest" and p["active"] and p["alive"]:
-            if killer in p["today"]["saints"] and victim in p["today"]["sinners"] and player not in game["mafia"]["trapped"]:
+            buddy = get_alive_buddy(game, player)
+            b = game["players"][buddy]
+            sinners = p["today"]["sinners"]+b["today"]["sinners"]
+            saints = p["today"]["saints"]+b["today"]["saints"]
+            if killer in saints and victim in sinners:# and player not in game["mafia"]["trapped"]:
                 game["deaths"][victim]["killer"] = ""
                 #p["role"] = "none"
                 p["active"] = False
+                b["active"] = False
                 output(player, "A saint killed {}! You lose your role powers for the rest of game, and the culprit will be innocent for all investigations.".format(victim))
-            elif killer in p["today"]["sinners"] and victim in p["today"]["saints"] and player not in game["mafia"]["trapped"]:
+                output(buddy, "A saint killed {}! You lose your role powers for the rest of game, and the culprit will be innocent for all investigations.".format(victim))
+            elif killer in sinners and victim in saints:# and player not in game["mafia"]["trapped"]:
                 output(player, "A sinner killed {}!".format(victim))
-            elif victim in p["today"]["saints"]:
+                output(buddy, "A sinner killed {}!".format(victim))
+            elif victim in saints:
                 output(player, "{} wasn't killed by any of {}".format(victim,p["today"]["sinners"]))
-            elif victim in p["today"]["sinners"]:
+                output(buddy, "{} wasn't killed by any of {}".format(victim,p["today"]["sinners"]))
+            elif victim in sinners:
                 output(player, "{} wasn't killed by any of {}".format(victim,p["today"]["saints"]))
+                output(buddy, "{} wasn't killed by any of {}".format(victim,p["today"]["saints"]))
 
     output("public", "{} died in {} at {}".format(victim,location,time))
 class IllegalAction(Exception):
     pass
 
-def trap(game, player, target, role):
+def trap(game, player, target, guess):
     if game["players"][player]["team"] != "mafia":
         raise IllegalAction("Only mafia can set traps!")
     if game["mafia"]["traps"] < 1:
         raise IllegalAction("Mafia are out of traps!")
     if target in game["mafia"]["untrappable"]:
-        raise IllegalAction("Mafia can't trapped someone they've used Seer on!")
-    if game["players"][target]["role"] == role:
+        raise IllegalAction("Mafia can't trap someone they've already trapped the buddy of!")
+    if game["players"][target]["buddy"] == guess:
         game["mafia"]["trapped"] += [target]
-        output("mafia", "You successfully trapped {} as {}".format(target, role))
+        output("mafia", "You successfully trapped {} as the buddy of {}".format(target, guess))
     else:
         game["mafia"]["traps"] -= 1
         output("mafia", "You failed to trap {} as {}".format(target, role))
@@ -248,15 +282,16 @@ def untrap(game, player, target):
 
 
 def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, correctPerson):
-    game["players"][player]["investigations"][kill] = 2*(correctPerson + correctPlace + correctTime)
+    buddy = get_alive_buddy(game, player)
+    game["players"][buddy]["investigations"][kill] = 2*(correctPerson + correctPlace + correctTime)
     l = (["time"] if correctTime else []) + (["location"] if correctPlace else []) + (["person"] if correctPerson else [])
     if player in game["mafia"]["trapped"]:
         game["players"][player]["investigations"][kill] = 0
         l = []
     if l:
-        output(player, "{} correctly identified the correct {} for the death of {}. You now have {} investigations you can use on this death".format(player, ", ".join(l), kill, game["players"][player]["investigations"][kill]))
+        output(buddy, "{} correctly identified the correct {} for the death of {}. You now have {} investigations you can use on this death".format(player, ", ".join(l), kill, game["players"][player]["investigations"][kill]))
     else:
-        output(player, "{} didn't predict anything correctly about the death of {}".format(player,kill))
+        output(buddy, "{} didn't predict anything correctly about the death of {}".format(player,kill))
 
 def submit_rollblock(game, player, target):
 
@@ -272,13 +307,22 @@ def submit_rollblock(game, player, target):
         return target
 
 def submit_priest_list(game, player, sinners, saints):
+    buddy = get_alive_buddy(game, player)
     if game["players"][player]["roleblocked"]:
         raise IllegalAction("Can't submit a priest list because you are roleblocked")
     elif game["players"][player]["role"]!="priest":
         raise IllegalAction("Can't submit a priest list because you aren't a priest!")
     else:
-        game["players"][player]["tomorrow"]={"sinners":sinners, "saints":saints}
-        output(player, "{} submitted preist lists of sinners: {} and saints: {} for day {}".format(player, sinners, saints, game["day"]+1))
+        if sinners:
+            game["players"][player]["tomorrow"]["sinners"]=sinners
+            game["players"][buddy]["tomorrow"]["sinners"]=sinners
+            output(player, "{} submitted lists of sinners: {} for day {}".format(player,sinners, game["day"]+1))
+            output(buddy, "{} submitted lists of sinners: {} for day {}".format(player,sinners, game["day"]+1))
+        if saints:
+            game["players"][player]["tomorrow"]["saints"]=saints
+            game["players"][buddy]["tomorrow"]["sinners"]=saints
+            output(player, "{} submitted lists of saint: {} for day {}".format(player,saints, game["day"]+1))
+            output(buddy, "{} submitted lists of saint: {} for day {}".format(player,saints, game["day"]+1))
 
 def frame(game, player, kill, target):
     if game["players"][player]["roleblocked"]:
@@ -293,6 +337,7 @@ def frame(game, player, kill, target):
     output(player, "{} framed {} for the death of {}".format(player, target, kill))
 
 def submit_prophecy(game, player, prophecy):
+    buddy = get_alive_buddy(game,player)
     if game["players"][player]["roleblocked"]:
         raise IllegalAction("Can't submit a prophecy because you are roleblocked!")
     if game["players"][player]["role"]!="prophet":
@@ -300,12 +345,14 @@ def submit_prophecy(game, player, prophecy):
     else:
         game["players"][player]["tomorrow"]=prophecy
         output(player, "{} predicts on day {} that {}".format(player, game["day"]+1,prophecy))
+        output(buddy, "{} predicts on day {} that {}".format(player, game["day"]+1,prophecy))
 
 def submit_vote(game, player, vote):
     game["players"][player]["vote"] = vote
     output(player, "{} voted for {}".format(player, vote))
 
 def see(game, player, target, result=None):
+    buddy = get_alive_buddy(game,player)
     if game["players"][player]["roleblocked"]:
         raise IllegalAction("Can't seer because you are roleblocked!")
     if game["players"][player]["role"]!="seer":
@@ -315,14 +362,16 @@ def see(game, player, target, result=None):
     else:
         game["players"][player]["uses"] -= 1
         if game["players"][player]["team"] == "mafia":
-            game["mafia"]["untrappable"] += [target]
-        possible_results = roles if player in game["mafia"]["trapped"] else [game["players"][target]["role"]]
+            pass
+            #game["mafia"]["untrappable"] += [target]
+        #possible_results = roles if player in game["mafia"]["trapped"] else [game["players"][target]["role"]]
+        possible_results = [game["players"][target]["role"]]
         if result==None:
             result = random.choice(roles) if player in game["mafia"]["trapped"] else game["players"][target]["role"]
         if result not in possible_results:
             raise IllegalAction("{} is not a possible result for {} to see as the role of {}".format(result, player, target))
         else:
-            output(player, "{} is a {}".format(target, result))
+            output(buddy, "{} is a {}".format(target, result))
             return result
 
 def infallible_investigate(game, player, guess):
@@ -363,14 +412,25 @@ def investigate(game,player, x, y, z, w=None):
             r = do_investigation(game, player, x, y, z, w)
             p["investigations"][z] -= 1
             return r
+    elif p["role"] == "vigilante":
+        if p["investigations"]==0:
+            raise IllegalAction("You are out of investigations!")
+        else:
+            r = do_investigation(game, player, x, y, z, w)
+            p["investigations"] -= 1
+            game["players"][get_alive_buddy(game,player)]["investigations"] -= 1
+            return r
     else:
         raise IllegalAction("Can't investigate because you aren't an investigator or a prophet!")
 def do_investigation(game, player, x, y, z, w):
     """doesn't check for legality, subroutine of investigate"""
+    buddy = get_alive_buddy(game,player)
+    """
     if player in game["mafia"]["trapped"]:
         w = random.choice([x,y])
         output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
         return (x,y,z,w)
+    """
     legal = []
     if game["deaths"][z]["killer"] == x:
         legal = [y]
@@ -395,7 +455,7 @@ def do_investigation(game, player, x, y, z, w):
                 break
         if not w:
             w = random.choice(legal)
-    output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
+    output(buddy, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
     game["deaths"][z]["investigations"] += [[x,y,w]]
     return (x, y, z, w)
 
@@ -416,23 +476,38 @@ def get_game_file_location(game_id):
 
 def get_game(game_id):
     with open(get_game_file_location(game_id)+"game_actions.txt") as file:
-        return [l.rstrip() for l in file.readlines()]
+        return json.loads(file.read())
+
+def get_game_as_commands(game_id):
+    l = get_game(game_id)
+    return [x["time"]+" "+json_to_command(x["command"]) for x in l]
+
+def commands_to_json(commands):
+    return [{"time":x[:x.find(" ",x.find(" ")+1)],"command":command_to_json(x[x.find(" ",x.find(" ")+1)+1:])} for x in commands]
 
 
 def load_game(game_id):
     return do_commands(get_game(game_id))
 
+def json_to_commands(commands):
+    return "\n".join(x["time"]+" "+json_to_command(x["command"]) for x in commands)
+
 
 def save_game(game_id, actions):
     (game, valid, messages) = do_commands(actions)
     with open(get_game_file_location(game_id)+"game_actions.txt","w") as file:
-        for line in valid:
-            file.write(line+"\n")
+        file.write(json.dumps(valid))
+        #for line in valid:
+        #    file.write(line+"\n")
     return (game, valid, messages)
 
 def check_valid_player(game,player):
     if player not in game["players"]:
         raise IllegalAction("{} isn't a player".format(player))
+
+import datetime
+def run_commands_and_save(game_id, commands):
+    return save_game(game_id, get_game(game_id)+ [{"time":str(datetime.datetime.now()), "command":command} for command in commands])
 
 def do_commands(commands):
     """
@@ -444,15 +519,16 @@ def do_commands(commands):
     valid = []
     for c in commands:
         try:
-            (game, c) = do_command(game, c)
-            valid += c.split("\n")
+            (game, c1) = do_command(game, c["command"])
+            c["command"] = c1
+            valid += [c]
         except IllegalAction as e:
             output("error", str(e))
         except Exception as e:
             traceback.print_exc()
     return (game, valid, reversed(messages))
 
-def do_command(game, command):
+
     """
     language of commands
     setup [file]
@@ -486,123 +562,209 @@ def do_command(game, command):
     [player] drop
         remove player from the game
     """
+
+def command_to_json(command):
     l = shlex.split(command)
     if l[0]=="setup":
-        with open(get_game_file_location(l[1])+"init.txt") as file:
-            game = json.loads(file.readlines()[0])
-            setup(game)
-            return (game, command)
+        return {"action":"setup","name":l[1]}
     elif l[0] == "seed":
-        random.seed(l[1])
-        return (game, command)
+        return {"action":l[0],"seed":l[1]}
     elif l[0] == "rollover":
-        if len(l)==1 or int(l[1])<time.time():
-            commands = "\n".join(rollover(game))
-            return (game, commands)
-        else:
-            return (game, command)
+        return {"action":l[0]}
     else:
         player = l[0]
-        check_valid_player(game, player)
         if l[1] == "investigate":
+            d = {"action":l[1],"player":l[0],"suspect1":l[2],"suspect2":l[3],"kill":l[5]}
             if len(l)==6:
-                x = l[2]
-                y = l[3]
-                z = l[5]
-                check_valid_player(game, x)
-                check_valid_player(game, y)
-                check_valid_player(game, z)
-                (x,y,z,w) = investigate(game, player, x, y, z)
-                command = command + " as " + w
-            elif len(l)==8:
-                x = l[2]
-                y = l[3]
-                z = l[5]
-                w = l[7]
-                check_valid_player(game, x)
-                check_valid_player(game, y)
-                check_valid_player(game, z)
-                check_valid_player(game, w)
-                investigate(game, player, x, y, z, w=w)
+                return d
             else:
-                raise IllegalAction("bad syntax: "+command)
+                d["result"]=l[7]
+                return d
         elif l[1] == "priest":
-            i = 2
-            sinners = []
-            saints = []
-            mode = 0 #0 for sinners, 1 for saints
-            while i < len(l):
-                if l[i] == "sinners":
-                    mode = 1
-                elif l[i] == "saints":
-                    mode = 0
-                else:
-                    check_valid_player(game, l[i])
-                    if mode:
-                        sinners += [l[i]]
-                    else:
-                        saints += [l[i]]
-                i += 1
-            submit_priest_list(game, player, sinners, saints)
-        elif l[1] == "predicts":
-            submit_prophecy(game, player, l[2])
-        elif l[1] == "roleblock":
-            check_valid_player(game, l[2])
-            submit_rollblock(game, player, l[2])
-        elif l[1] == "seer":
-            check_valid_player(game, l[2])
-            if len(l)>3:
-                see(game, player, l[2], result=l[4])
+            if l[2] == "sinners":
+                return {"action":l[1],"player":l[0],"mode":"sinners","list":l[3:]}
+            elif l[2] == "saints":
+                return {"action":l[1],"player":l[0],"mode":"saints","list":l[3:]}
             else:
-                result = see(game, player, l[2])
-                command = command + " as \""+result+"\""
+                raise IllegalAction("Invalid priest list syntax")
+        elif l[1] == "predicts":
+            return {"action":l[1],"player":l[0],"prophecy":l[2]}
+        elif l[1] == "roleblock":
+            return {"action":l[1],"player":l[0],"target":l[2]}
+        elif l[1] == "seer":
+            if len(l)<4:
+                return {"action":l[1],"player":l[0],"target":l[2]}
+            else:
+                return {"action":l[1],"player":l[0],"target":l[2],"result":l[4]}
         elif l[1] == "kill":
             if len(l) < 7 or l[3]!="at" or l[5]!="in":
                 raise IllegalAction("bad syntax: "+command)
-            check_valid_player(game, l[2])
-            if game["players"][l[2]]["alive"]:
-                kill(game, player, l[2], l[4], l[6])
+            return {"action":l[1],"player":l[0],"target":l[2],"time":l[4],"location":l[6]}
+        elif l[1] == "predicted":
+            return {"action":l[1],"player":l[0],"correctTime":"time" in l[2:-2],"correctPlace":"location" in l[2:-2],"correctPerson":"person" in l[2:-2],"kill":l[-1]}
+        elif l[1] == "guess":
+            return {"action":l[1],"player":l[0],"target":l[2]}
+        elif l[1] == "vote":
+            return {"action":l[1],"player":l[0],"target":l[2]}
+        elif l[1] == "frame":
+            return {"action":l[1],"player":l[0],"target":l[2], "kill":l[4]}
+        elif l[1] == "trap":
+            return {"action":l[1],"player":l[0],"target":l[2], "guess":l[4]}
+        elif l[1] == "untrap":
+            return {"action":l[1],"player":l[0],"target":l[2]}
+        elif l[1] == "intro":
+            return {"action":l[1],"player":l[0]}
+        elif l[1] == "drop":
+            return {"action":l[1],"player":l[0]}
+        raise IllegalAction("bad syntax command not recognized:"+command)
+
+
+def json_to_command(json_obj):
+    action = json_obj['action']
+    if action == 'setup':
+        return 'setup ' + json_obj['name']
+    elif action == 'seed':
+        return 'seed ' + json_obj['seed']
+    elif action == 'rollover':
+        return 'rollover'
+    else:
+        player = json_obj['player']
+        if action == 'investigate':
+            command = player + ' investigate ' + json_obj['suspect1'] + ' ' + json_obj['suspect2'] + ' '
+            command += 'kill ' + json_obj['kill']
+            if 'result' in json_obj:
+                command += 'result ' + json_obj['result'] + ' '
+            return command
+        elif action == 'priest':
+            mode = json_obj['mode']
+            if mode == 'sinners':
+                return player + ' priest sinners ' + ' '.join(json_obj['list'])
+            elif mode == 'saints':
+                return player + ' priest saints ' + ' '.join(json_obj['list'])
+            else:
+                raise ValueError('Invalid priest list syntax')
+        elif action == 'predicts':
+            return player + ' predicts ' + json_obj['prophecy']
+        elif action == 'roleblock':
+            return player + ' roleblock ' + json_obj['target']
+        elif action == 'seer':
+            command = player + ' seer ' + json_obj['target'] + ' '
+            if 'result' in json_obj:
+                command += 'result ' + json_obj['result'] + ' '
+            return command
+        elif action == 'kill':
+            return player + ' kill ' + json_obj['target'] + ' at ' + json_obj['time'] + ' in ' + json_obj['location']
+        elif action == 'predicted':
+            command = player + ' predicted '
+            if json_obj['correctTime']:
+                command += 'time '
+            if json_obj['correctPlace']:
+                command += 'location '
+            if json_obj['correctPerson']:
+                command += 'person '
+            command += 'of ' + json_obj['kill']
+            return command
+        elif action == 'guess':
+            return player + ' guess ' + json_obj['target']
+        elif action == 'vote':
+            return player + ' vote ' + json_obj['target']
+        elif action == 'frame':
+            return player + ' frame ' + json_obj['target'] + ' kill ' + json_obj['kill']
+        elif action == 'trap':
+            return player + ' trap ' + json_obj['target'] + ' guess ' + json_obj['guess']
+        elif action == 'untrap':
+            return player + ' untrap ' + json_obj['target']
+        elif action == 'intro':
+            return player + ' intro'
+        elif action == 'drop':
+            return player + ' drop'
+        else:
+            raise ValueError('Invalid action type: ' + action)
+
+
+
+def do_command(game, command):
+    """
+    takes a dict of the command, and performs the game action
+    """
+    action = command["action"]
+    if action=="setup":
+        with open(get_game_file_location(command["name"])+"init.txt") as file:
+            game = json.loads(file.readlines()[0])
+            setup(game)
+    elif action == "seed":
+        random.seed(command["seed"])
+    elif action == "rollover":
+        rollover(game)
+    else:
+        player = command["player"]
+        check_valid_player(game, player)
+        if action == "investigate":
+            x = command["suspect1"]
+            y = command["suspect2"]
+            z = command["kill"]
+            check_valid_player(game, x)
+            check_valid_player(game, y)
+            check_valid_player(game, z)
+            if "result" not in command:
+                (x,y,z,w) = investigate(game, player, x, y, z)
+                command["result"] = w
+            else:
+                w = command["result"]
+                check_valid_player(game, w)
+                investigate(game, player, x, y, z, w=w)
+        elif action == "priest":
+            if command["mode"] == "sinners":
+                submit_priest_list(game, player, command["list"], [])
+            elif command["mode"] == "saints":
+                submit_priest_list(game, player, [], command["list"])
+            else:
+                raise IllegalAction
+        elif action == "predicts":
+            submit_prophecy(game, player, command["prophecy"])
+        elif action == "roleblock":
+            check_valid_player(game, command["target"])
+            submit_rollblock(game, player, command["target"])
+        elif action == "seer":
+            check_valid_player(game, command["target"])
+            if "result" in command:
+                see(game, player, command["target"], result=command["result"])
+            else:
+                result = see(game, player, command["target"])
+                command["result"] = result
+        elif action == "kill":
+            check_valid_player(game, command["target"])
+            if game["players"][command["target"]]["alive"]:
+                kill(game, player, command["target"], command["time"], command["location"])
             else:
                 raise IllegalAction("can't kill a dead player!")
-        elif l[1] == "predicted":
-            i=2
-            correctTime = False
-            correctPlace = False
-            correctPerson = False
-            while l[i] in ["location","time","person"]:
-                if l[i]=="location":
-                    correctPlace = True
-                elif l[i]=="time":
-                    correctTime = True
-                elif l[i]=="person":
-                    correctPerson = True
-                i+=1
-            check_valid_player(game, l[i+1])
-            grant_prophet_investigations(game, player, l[i+1], correctTime, correctPlace, correctPerson)
-        elif l[1] == "guess":
-            check_valid_player(game, l[2])
-            infallible_investigate(game, player, l[2])
-        elif l[1] == "vote":
-            if l[2]!="no-execution":
-                check_valid_player(game, l[2])
-            submit_vote(game, player, l[2])
-        elif l[1] == "frame":
-            check_valid_player(game, l[2])
-            check_valid_player(game, l[4])
-            frame(game, player, l[4], l[2])
-        elif l[1] == "trap":
-            check_valid_player(game, l[2])
-            if l[4] not in roles:
-                raise IllegalAction("Not a valid role!")
-            trap(game, player, l[2], l[4])
-        elif l[1] == "untrap":
-            check_valid_player(game, l[2])
-            untrap(game, player, l[2])
-        elif l[1] == "intro":
-            game["players"][l[0]]["intro"]=1
-        elif l[1] == "drop":
-            game["players"][l[0]]["alive"]=0
-        return (game, command)
+        elif action == "predicted":
+            check_valid_player(game, command["kill"])
+            grant_prophet_investigations(game, player, command["kill"], command["correctTime"], command["correctPlace"], command["correctPerson"])
+        elif action == "guess":
+            check_valid_player(game, command["target"])
+            infallible_investigate(game, player, command["target"])
+        elif action == "vote":
+            if command["target"]!="no-execution":
+                check_valid_player(game, command["target"])
+            submit_vote(game, player, command["target"])
+        elif action == "frame":
+            check_valid_player(game, command["target"])
+            check_valid_player(game, command["kill"])
+            frame(game, player, command["kill"], command["target"])
+        elif action == "trap":
+            check_valid_player(game, command["target"])
+            if command["guess"] not in (game["players"]+[""]):
+                raise IllegalAction("Not a valid possible buddy!")
+            trap(game, player, command["target"], command["guess"])
+        elif action == "untrap":
+            check_valid_player(game, command["target"])
+            untrap(game, player, command["target"])
+        elif action == "intro":
+            game["players"][player]["intro"]=1
+        elif action == "drop":
+            game["players"][player]["alive"]=0
+    return (game, command)
 
 if __name__=="__main__":
     with open("game_actions.txt") as file:

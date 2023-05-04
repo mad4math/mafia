@@ -8,7 +8,7 @@ def role(game, player):
     pl = player_list(game)
     role_actions = "You are a <b>{}</b><br>".format(p["role"])
     if not p["intro"]:
-        return "Please post your intro on <a href=https://mafia.csail.mit.edu/22-02-town-square/m/s3coEzHXqvaFeeESY>this thread</a>"
+        return "Please post your intro on <a href=https://mafia.csail.mit.edu/23-01-town-square/m/t9kW2CcLtQJ6hKDta>this thread</a>"
     if p["roleblocked"] and p["role"]!="gay knight":
         return role_actions + "<br> You are roleblocked today!"
     if not p["alive"]:
@@ -36,6 +36,13 @@ def role(game, player):
         <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
         <button onClick=sendInvestigation()>Investigate</button>{}
         """.format(p["investigations"],all_players_options,all_players_options,deaths_options,m,mf)
+    elif p["role"] == "vigilante":
+        role_actions += """
+        Submit an investigation: (You have <b>{}</b> left today.)<br>
+        <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
+        <button onClick=sendInvestigation()>Investigate</button>{}
+        """.format(p["investigations"],all_players_options,all_players_options,deaths_options,m,mf)
+
     elif p["role"] == "prophet":
         deaths_options_a = "\n".join(option(x) for x in game["deaths"] if (x in p["investigations"] and p["investigations"][x]))
         m = ""
@@ -76,10 +83,11 @@ def role(game, player):
             role_actions += """
                     Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored)<br>
             Sinners:<div id="sinners">
-            {}
+            {}    
+            </div><button onclick="sendPriestSinnersList()">Submit sinners list</button>
             </div>Saints:<div id="saints">
             {}
-            </div><button onclick="sendPriestList()">Submit lists</button>
+            </div><button onclick="sendPriestSaintsList()">Submit saints list</button>
             """.format(alive_selector*size,alive_selector*size)
         else:
             role_actions += """You lost your priestly role powers!"""
@@ -117,7 +125,10 @@ def faction(game, player):
         """.format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"), alive_options, role_options)
         return a
     else:
-        return ""
+        a = """
+        You are <b>town</b>. You buddy is <b>{}</b>. You both know that each other is town, and share some role actions. You should coordinate with each other!
+        """.format(game["players"][player]["buddy"])
+        return a
 def display(game, player, messages):
     allowed = [player, "public", "error"]
     if game["players"][player]["team"]=="mafia":
@@ -159,7 +170,7 @@ def main_page(game, player, messages):
     <body>
       <div style="width: 100%; overflow: hidden;">
         <div>
-                game ID:<input id="id" value="fall22-02" disabled><br>
+                game ID:<input id="id" value="spring23-01" disabled><br>
                 username:<input id="player" value="{}" disabled><br>
               </div>
       <div id="player-info">
