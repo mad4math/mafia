@@ -267,7 +267,7 @@ def trap(game, player, target, guess):
         raise IllegalAction("Mafia can't trap someone they've already trapped the buddy of!")
     if game["players"][target]["buddy"] == guess:
         game["mafia"]["trapped"] += [target]
-        output("mafia", "You successfully trapped {} as the buddy of {}".format(target, guess))
+        output("mafia", "You successfully trapped {} as the buddy of {}. You may kill one of them for free.".format(target, guess))
     else:
         game["mafia"]["traps"] -= 1
         output("mafia", "You failed to trap {} as {}".format(target, role))

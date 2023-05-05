@@ -7,17 +7,19 @@
   <script>
     var count;
     var players;
+    function receiveGameState() {
+        if (this.readyState == 4 && this.status == 200) {
+           document.getElementById("command_box").value = this.responseText.split("$")[0];
+           document.getElementById("display").innerHTML = this.responseText.split("$")[1];
+           count = this.responseText.split("$")[2];
+           players = this.responseText.split("$")[3].split(",");
+           document.getElementById("common_actions").innerHTML = this.responseText.split("$")[4];
+        }
+
+    }
     function loadGame() {
         var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-               // Typical action to be performed when the document is ready:
-               document.getElementById("command_box").value = xhttp.responseText.split("$")[0];
-               document.getElementById("display").innerHTML = xhttp.responseText.split("$")[1];
-               count = xhttp.responseText.split("$")[2];
-               players = xhttp.responseText.split("$")[3].split(",");
-            }
-        };
+        xhttp.onreadystatechange = receiveGameState;
         xhttp.open("GET", "cgi-bin/load_admin.py?id="+document.getElementById("game_id").value, true);
         xhttp.send();
     };
@@ -28,15 +30,7 @@
 
     function updateGame() {
     var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-           // Typical action to be performed when the document is ready:
-               document.getElementById("command_box").value = xhttp.responseText.split("$")[0];
-               document.getElementById("display").innerHTML = xhttp.responseText.split("$")[1];
-               count = xhttp.responseText.split("$")[2];
-               players = xhttp.responseText.split("$")[3].replaceAll("\n","").split(",");
-        }
-    };
+    xhttp.onreadystatechange = receiveGameState;
     xhttp.open("POST", "cgi-bin/save_admin.py", true);
     xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     params = "id="+document.getElementById("game_id").value+"&count="+count+"&commands="+document.getElementById("command_box").value;
@@ -72,6 +66,9 @@
   <br>
   <button onClick=updateGame()>Update game</button>
   <button onClick=addIntros()>Add all intros</button>
+  <br>
+  <div id="common_actions">
+
   </div>
   <div id="display" style="margin-left:500px;"></div>
   </div>
