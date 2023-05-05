@@ -270,7 +270,7 @@ def trap(game, player, target, guess):
         output("mafia", "You successfully trapped {} as the buddy of {}. You may kill one of them for free.".format(target, guess))
     else:
         game["mafia"]["traps"] -= 1
-        output("mafia", "You failed to trap {} as {}".format(target, role))
+        output("mafia", "You failed to trap {} as {}".format(target, guess))
 
 def untrap(game, player, target):
     if game["players"][player]["team"] != "mafia":
@@ -680,7 +680,7 @@ def json_to_command(json_obj):
         elif action == 'frame':
             return player + ' frame ' + json_obj['target'] + ' kill ' + json_obj['kill']
         elif action == 'trap':
-            return player + ' trap ' + json_obj['target'] + ' guess ' + json_obj['guess']
+            return player + ' trap ' + json_obj['target'] + ' guess ' + (json_obj['guess'] if json_obj['guess'] else "")
         elif action == 'untrap':
             return player + ' untrap ' + json_obj['target']
         elif action == 'intro':
@@ -763,7 +763,7 @@ def do_command(game, command):
             frame(game, player, command["kill"], command["target"])
         elif action == "trap":
             check_valid_player(game, command["target"])
-            if command["guess"] not in (game["players"]+[""]):
+            if command["guess"] not in game["players"] and command["guess"]:
                 raise IllegalAction("Not a valid possible buddy!")
             trap(game, player, command["target"], command["guess"])
         elif action == "untrap":

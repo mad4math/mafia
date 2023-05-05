@@ -64,7 +64,7 @@ function sendSeer() {
 }
 function sendTrap() {
   var xhttp = setupRequest();
-  params = gg()+"&action=trap&target="+getInput("trap-target")+"&role="+getInput("trap-guess");
+  params = gg()+"&action=trap&target="+getInput("trap-target")+"&guess="+getInput("trap-guess");
   xhttp.send(params);
 }
 function sendActionWithTarget(action) {
