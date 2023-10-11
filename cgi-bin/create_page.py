@@ -82,7 +82,7 @@ def role(game, player):
         size = int(len([x for x in pl if game["players"][x]["alive"]])*.2+.99)
         if p["active"]:
             role_actions += """
-                    Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored)<br>
+                    Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored. The max list size is 20 percent of game, rounded up.)<br>
             Sinners:<div id="sinners">
             {}    
             </div><button onclick="sendPriestSinnersList()">Submit sinners list</button>
@@ -127,9 +127,12 @@ def faction(game, player):
         """.format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"), alive_options, all_players_options, game["mafia"]["traps"])
         return a
     else:
-        a = """
-        You are <b>town</b>. You buddy is <b>{}</b>. You both know that each other is town, and share some role actions. You should coordinate with each other!
-        """.format(game["players"][player]["buddy"])
+        if mafia.USE_BUDDY:
+            a = """
+            You are <b>town</b>. You buddy is <b>{}</b>. You both know that each other is town, and share some role actions. You should coordinate with each other!
+            """.format(game["players"][player]["buddy"])
+        else:
+            a = """ You are <b>town</b>."""
         return a
 def display(game, player, messages):
     allowed = [player, "public", "error"]
@@ -172,7 +175,7 @@ def main_page(game, player, messages):
     <body>
       <div style="width: 100%; overflow: hidden;">
         <div>
-                game ID:<input id="id" value="spring23-01" disabled><br>
+                game ID:<input id="id" value="{}" disabled><br>
                 username:<input id="player" value="{}" disabled><br>
               </div>
       <div id="player-info">
@@ -181,5 +184,5 @@ def main_page(game, player, messages):
       </div>
     </body>
     </html>
-    """.format(player, player_info(game, player, messages))
+    """.format(game["id"], player, player_info(game, player, messages))
     return h

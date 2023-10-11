@@ -10,6 +10,9 @@ d = cgi.FieldStorage()
 game_id = d.getfirst("id")
 player = d.getfirst("player")
 (game, valid, messages) = mafia.load_game(game_id)
-h = create_page.main_page(game, player, messages)
-print("Content-type: text/html\n")
-print(h)
+if player not in game["players"]:
+	print("Content-type: text/html\n{} is not a player in this game.".format(player))
+else: 
+	h = create_page.main_page(game, player, messages)
+	print("Content-type: text/html\n")
+	print(h)

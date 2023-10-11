@@ -4,10 +4,26 @@
 <meta charset="utf-8">
 </head>
 <body>
+  <script type="text/javascript">
+    var xhttp = new XMLHttpRequest();
+xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+        console.log(this.responseText);
+        var games = this.responseText.split("/");
+        s = "";
+        for(var i=0;i<games.length;i++) {
+            s += `<input type="radio" name="id" value="${games[i]}" id="${games[i]}"${(i==0)?' checked=True':''}><label for="${games[i]}">${games[i]}</label><br>`
+        }
+        game_id_selection.innerHTML = s;
+    }
+};
+xhttp.open("GET", "cgi-bin/get_games.py", true);
+xhttp.send();
+  </script>
   <div style="width: 100%; overflow: hidden;">
     <div>
             <form action="cgi-bin/load_player.py">
-            game ID:<input name="id" value="spring23-01"><br>
+            game ID: <br><div id="game_id_selection"></div>
             username:<input name="player">
   <input type="submit" value="Load Game">
 </form>

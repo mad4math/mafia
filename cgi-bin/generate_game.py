@@ -10,7 +10,7 @@ cgitb.enable()
 
 
 def generate_game(game_id, player_list, mafia_count):
-    game = {"players":mafia.generate_players(player_list,int(mafia_count))}
+    game = {"players":mafia.generate_players(player_list,int(mafia_count)), "id":game_id}
     if game_id not in os.listdir(mafia.get_game_file_location(None)):
         os.mkdir(mafia.get_game_file_location(None)+game_id)
     with open(mafia.get_game_file_location(game_id)+"init.txt","w") as out:
@@ -24,7 +24,7 @@ def generate_game(game_id, player_list, mafia_count):
 d = cgi.FieldStorage()
 game_id = d.getfirst("game_id")
 
-player_list = [x.rstrip() for x in d.getfirst("players").split("\n")]
+player_list = [x.rstrip() for x in d.getfirst("players").split("\n") if x.rstrip()]
 mafia_count = d.getfirst("mafia_count")
 generate_game(game_id,player_list,mafia_count)
 (game, valid, messages) = mafia.save_game(game_id, [{"time":str(datetime.datetime.now()), "command":{"action":"setup", "name":game_id}}])

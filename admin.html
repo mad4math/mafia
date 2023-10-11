@@ -7,20 +7,24 @@
   <script>
     var count;
     var players;
+    var gameState;
     function receiveGameState() {
         if (this.readyState == 4 && this.status == 200) {
+           console.log(this.responseText);
            document.getElementById("command_box").value = this.responseText.split("$")[0];
-           document.getElementById("display").innerHTML = this.responseText.split("$")[1];
+           document.getElementById("display").innerHTML = this.responseText.split("$")[1] + "<br>" + this.responseText.split("$")[4];
            count = this.responseText.split("$")[2];
-           players = this.responseText.split("$")[3].split(",");
-           document.getElementById("common_actions").innerHTML = this.responseText.split("$")[4];
+           document.getElementById("common_actions").innerHTML = this.responseText.split("$")[3];
+           gameState = JSON.parse(this.responseText.split("$")[4]);
+           updateDayEndMessage();
+           updateProphetResponses();
         }
 
     }
     function loadGame() {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = receiveGameState;
-        xhttp.open("GET", "cgi-bin/load_admin.py?id="+document.getElementById("game_id").value, true);
+        xhttp.open("GET", "cgi-bin/load_admin.py?id="+get_game_id(), true);
         xhttp.send();
     };
     String.prototype.replaceAll = function(search, replacement) {
@@ -33,15 +37,19 @@
     xhttp.onreadystatechange = receiveGameState;
     xhttp.open("POST", "cgi-bin/save_admin.py", true);
     xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    params = "id="+document.getElementById("game_id").value+"&count="+count+"&commands="+document.getElementById("command_box").value;
+    params = "id="+get_game_id()+"&count="+count+"&commands="+document.getElementById("command_box").value;
     xhttp.send(params);
     };
     function addIntros() {
         s = "";
-        for(var i=0;i<players.length;i++) {
-        s += "\n"+getCurrentDateTime() + " " + players[i] + " intro";
-    }
+        players = gameState.players;
+        console.log(gameState.players);
+        for(const p in players) {
+            if(players[p].intro==0)
+                s += "\n"+getCurrentDateTime() + " " + p + " intro";
+        }
         document.getElementById("command_box").value += s;
+        updateGame();
     }
     function getCurrentDateTime() {
   const now = new Date();
@@ -54,11 +62,75 @@
   const millisecond = String(now.getMilliseconds()).padStart(3, '0');
   return `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
 }
+function get_game_id() {
+    var e = document.getElementsByName('game_id');
+    for (i = 0; i < e.length; i++) {
+        if (e[i].checked)
+            return e[i].value;
+    }
+    return "";
+}
 
+var xhttp = new XMLHttpRequest();
+xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+        console.log(this.responseText);
+        var games = this.responseText.split("/");
+        s = "";
+        for(var i=0;i<games.length;i++) {
+            s += `<input type="radio" name="game_id" value="${games[i]}" id="${games[i]}"${(i==0)?' checked=True':''}><label for="${games[i]}">${games[i]}</label><br>`
+        }
+        game_id_selection.innerHTML = s;
+    }
+};
+xhttp.open("GET", "cgi-bin/get_games.py", true);
+xhttp.send();
+
+function scheduleRollover() {
+    document.getElementById("command_box").value += "\n"+document.getElementById("rollover_time").value+" rollover";
+    updateGame();
+}
+
+function updateDayEndMessage() {
+    if(gameState.day == 0)
+        return;
+    var s = "";
+    console.log(gameState);
+    console.log(gameState.votes[gameState.day-1]);
+    for(player in gameState.votes[gameState.day-1]) {
+        s += `@${player} was voted for by ${gameState.votes[gameState.day-1][player].map(x => "@"+x).join(", ")}  <br>`;
+    }
+    document.getElementById("day_end_message").innerHTML = s;
+}
+
+function updateProphetResponses() {
+    s = "";
+    for(player in gameState.players) {
+        if(gameState.players[player].role == "prophet") {
+            for(kill in gameState.deaths) {
+                if(!(kill in gameState.players[player].resolved)) {
+                    s += `Which of these are true of this prophecy by ${player} for ${kill}?: ${gameState.players[player].prophecies[gameState.deaths[kill].day-1]}<br>`;
+                    s += `<input type="checkbox" value="time" name="time_${player}${kill}" id="time_${player}${kill}"><label for="time_${player}${kill}">time</label><br>`;
+                    s += `<input type="checkbox" value="location" name="location_${player}${kill}" id="location_${player}${kill}"><label for="location_${player}${kill}">location</label><br>`;
+                    s += `<input type="checkbox" value="person" name="person_${player}${kill}" id="person_${player}${kill}"><label for="person_${player}${kill}">person</label><br>`;
+                    s += `<button onclick=grantInvestigations("${player}","${kill}")>Grant investigations</button><br>`;
+                }
+            }
+        }
+    }
+    document.getElementById("prophet_responses").innerHTML = s;
+}
+function grantInvestigations(player, kill) {
+    document.getElementById("command_box").value += "\n"+getCurrentDateTime()+" "+player+" predicted "+(document.getElementById(`time_${player}${kill}`).checked?"time ":"")+
+    (document.getElementById(`location_${player}${kill}`).checked?"location ":"")+(document.getElementById(`person_${player}${kill}`).checked?"person ":"")+" for "+kill;
+    updateGame();
+}
   </script>
   <div style="width: 100%; overflow: hidden;">
     <div style="width 480px; float: left;">
-  game ID:<input id="game_id" value="spring23-01">
+  game ID: <br><div id="game_id_selection"></div>
+
+  <!--<input id="game_id" value="test1">-->
   <button onClick=loadGame()>Load game</button>
   <a href="newgame.html">new game</a>
   <br>
@@ -67,9 +139,22 @@
   <button onClick=updateGame()>Update game</button>
   <button onClick=addIntros()>Add all intros</button>
   <br>
+  Schedule a rollover at <input id="rollover_time" size="40"><button onClick=scheduleRollover()>Schedule</button>
+  <br>
+  <!--
+  Post a kill: <input id="killer"> killed <input id="victim"> at time <input id="kill_time"><button onclick=shceduleKill()>
+-->
+Respond to prophets:<br>
+<div id="prophet_responses"></div>
+<br>
+  Last day end message:<br>
+  <div id="day_end_message">
+  </div>
+
   <div id="common_actions">
 
   </div>
+</div>
   <div id="display" style="margin-left:500px;"></div>
   </div>
 </body>
