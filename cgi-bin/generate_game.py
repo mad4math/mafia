@@ -13,7 +13,7 @@ def generate_game(game_id, player_list, mafia_count):
     game = {"players":mafia.generate_players(player_list,int(mafia_count)), "id":game_id}
     if game_id not in os.listdir(mafia.get_game_file_location(None)):
         pass
-        #os.mkdir(mafia.get_game_file_location(None)+game_id)
+        os.mkdir(mafia.get_game_file_location(None)+game_id)
     with open(mafia.get_game_file_location(game_id)+"init.txt","w") as out:
         out.write(json.dumps(game))
     with open(mafia.get_game_file_location(game_id)+"players.txt","w") as out:

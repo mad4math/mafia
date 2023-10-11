@@ -7,6 +7,8 @@ import os
 cgitb.enable()
 
 print("Content-type: text/plain\n")
+print("")
+"""
 games = os.listdir(mafia.get_game_file_location(None)[:-1])
 
 def get_game_time(game):
@@ -14,3 +16,4 @@ def get_game_time(game):
 
 games.sort(key = get_game_time, reverse=True)
 print("/".join(games))
+"""
