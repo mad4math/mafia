@@ -8,7 +8,7 @@ def role(game, player):
     pl = player_list(game)
     role_actions = "You are a <b>{}</b><br>".format(p["role"])
     if not p["intro"]:
-        return "Please post your intro on <a href=https://mafia.csail.mit.edu/23-01-town-square/m/t9kW2CcLtQJ6hKDta>this thread</a>"
+        return "Please post your intro on <a href=https://mafia.csail.mit.edu/23-02-town-square/m/YcA7YGveLZ2kWWr9u>this thread</a>"
     if p["roleblocked"] and p["role"]!="gay knight":
         return role_actions + "<br> You are roleblocked today!"
     if not p["alive"]:
