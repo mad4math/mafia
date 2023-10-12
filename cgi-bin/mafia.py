@@ -60,7 +60,7 @@ def generate_players(players,mafia):
     """
     s = (int)(random.random()*1e9)
     random.seed(s)
-    print(s)
+    #print(s)
     last_gay = None
     result = {}
     while not result or (last_gay and not USE_BUDDY):
