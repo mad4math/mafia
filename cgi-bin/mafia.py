@@ -568,6 +568,8 @@ def do_commands(commands):
         file has a json of roles/alignments. The first command should always be this one
     rollover
         does a day rollover
+    edit
+        manually edit the json, each argument is another level into the json
     [player] investigate [x] [y] for [z] [as w]
         player does an investigation of x and y for kill z [intending to return w]
     [player] priest sinners [[  separated list of sinnners]] saints [[  separated list of sinnners]]
@@ -604,6 +606,8 @@ def command_to_json(command):
         return {"action":l[0],"seed":l[1]}
     elif l[0] == "rollover":
         return {"action":l[0]}
+    elif l[0] == "edit":
+        return {"action":l[0], "path":l[1:-1], "code":l[-1]}
     else:
         player = l[0]
         if l[1] == "investigate":
@@ -660,6 +664,8 @@ def json_to_command(json_obj):
         return 'seed ' + json_obj['seed']
     elif action == 'rollover':
         return 'rollover'
+    elif action == 'edit':
+        return 'edit ' + ' '.join(json_obj['path']) + ' ' + json_obj['code']
     else:
         player = json_obj['player']
         if action == 'investigate':
@@ -729,6 +735,12 @@ def do_command(game, command):
         random.seed(command["seed"])
     elif action == "rollover":
         rollover(game)
+    elif action == "edit":
+        g = game
+        for i in range(len(command["path"])-1):
+            g = g[command["path"][i]]
+        g[command["path"][-1]] = command["code"]
+        output("admin","game"+''.join("[\""+x+"\"]" for x in command["path"][:-1])+"=\"{}\"".format(command["code"]))
     else:
         player = command["player"]
         check_valid_player(game, player)
