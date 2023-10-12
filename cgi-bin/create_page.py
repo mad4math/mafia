@@ -63,7 +63,10 @@ def role(game, player):
         <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
         <button onclick="sendInvestigation()">Investigate</button>
         """.format(alive_options, "\n<br>".join("<b>"+target+": "+str(p["investigations"][target])+"</b>" for target in p["investigations"]),
-         all_players_options, all_players_options, deaths_options_a, m)
+         all_players_options, all_players_options, deaths_options_a, m) + """<br>
+        prophecy for today that you made yesterday: {}<br>
+        prophecy for tomorrow: {}
+        """.format(p["prophecies"][game["day"]-1],p["prophecies"][game["day"]])
     elif p["role"] == "roleblocker":
         role_actions += """
                 Submit a roleblock:<br>
@@ -82,14 +85,17 @@ def role(game, player):
         size = int(len([x for x in pl if game["players"][x]["alive"]])*.2+.99)
         if p["active"]:
             role_actions += """
-                    Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored. The max list size is 20 percent of game, rounded up.)<br>
-            Sinners:<div id="sinners">
+                    Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored. The max size of each list is 20 percent of the number of alive players at the end of the day, rounded up.)<br>
+            Sinners:(<b>current selection for tomorrow is {}</b>)<div id="sinners">
             {}    
-            </div><button onclick="sendPriestSinnersList()">Submit sinners list</button>
-            </div>Saints:<div id="saints">
+            <button onclick="sendPriestSinnersList()">Submit sinners list</button></div>
+            Saints:(<b>current selection for tomorrow is {}</b>)<div id="saints">
             {}
-            </div><button onclick="sendPriestSaintsList()">Submit saints list</button>
-            """.format(alive_selector*size,alive_selector*size)
+            <button onclick="sendPriestSaintsList()">Submit saints list</button></div>
+            Current lists for today:<br>
+            Sinners: {}<br>
+            Saints: {}<br>
+            """.format(p["tomorrow"]["sinners"],alive_selector*size,p["tomorrow"]["saints"],alive_selector*size,p["today"]["sinners"],p["today"]["saints"])
         else:
             role_actions += """You lost your priestly role powers!"""
     elif p["role"] == "gay knight":
@@ -121,10 +127,17 @@ def faction(game, player):
     all_players_options = "\n".join(option(x) for x in player_list(game))
     if game["players"][player]["team"]=="mafia":
         a = """
-        You are the mafia! The mafia team is <b>{}</b><br>
-        Use a trap: Trap <select id="trap-target">{}</select> as the buddy of <select id="trap-guess">{}</select> 
+        You are the mafia! The mafia team is <b>{}</b><br>""".format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"))
+        if mafia.USE_BUDDY:
+            a += """
+            Use a trap: Trap <select id="trap-target">{}</select> as the buddy of <select id="trap-guess">{}</select> 
             <button onclick="sendTrap()">Trap!</button> Traps left: <b>{}</b>
-        """.format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"), alive_options, all_players_options, game["mafia"]["traps"])
+            """.format(alive_options, all_players_options, game["mafia"]["traps"])
+        else:
+            a += """
+            Use a trap: Trap <select id="trap-target">{}</select> as <select id="trap-guess">{}</select> 
+            <button onclick="sendTrap()">Trap!</button> Traps left: <b>{}</b>
+            """.format(alive_options, role_options, game["mafia"]["traps"])
         return a
     else:
         if mafia.USE_BUDDY:

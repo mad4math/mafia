@@ -10,7 +10,7 @@
     var gameState;
     function receiveGameState() {
         if (this.readyState == 4 && this.status == 200) {
-           console.log(this.responseText);
+           //console.log(this.responseText);
            document.getElementById("command_box").value = this.responseText.split("$")[0];
            document.getElementById("display").innerHTML = this.responseText.split("$")[1] + "<br>" + this.responseText.split("$")[4];
            count = this.responseText.split("$")[2];
@@ -43,7 +43,6 @@
     function addIntros() {
         s = "";
         players = gameState.players;
-        console.log(gameState.players);
         for(const p in players) {
             if(players[p].intro==0)
                 s += "\n"+getCurrentDateTime() + " " + p + " intro";
@@ -74,7 +73,7 @@ function get_game_id() {
 var xhttp = new XMLHttpRequest();
 xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-        console.log(this.responseText);
+        //console.log(this.responseText);
         var games = this.responseText.split("/");
         s = "";
         for(var i=0;i<games.length;i++) {
@@ -95,8 +94,6 @@ function updateDayEndMessage() {
     if(gameState.day == 0)
         return;
     var s = "";
-    console.log(gameState);
-    console.log(gameState.votes[gameState.day-1]);
     for(player in gameState.votes[gameState.day-1]) {
         s += `@${player} was voted for by ${gameState.votes[gameState.day-1][player].map(x => "@"+x).join(", ")}  <br>`;
     }
@@ -125,6 +122,20 @@ function grantInvestigations(player, kill) {
     (document.getElementById(`location_${player}${kill}`).checked?"location ":"")+(document.getElementById(`person_${player}${kill}`).checked?"person ":"")+" for "+kill;
     updateGame();
 }
+function scheduleKill() {
+    kill_time = document.getElementById("kill_time").value.split(/\:|\-/g);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate() + (kill_time[0]==23?1:0)).padStart(2, '0');
+  const hour = String((parseInt(kill_time[0])+1)%24).padStart(2, '0');
+  const minute = String(kill_time[1]).padStart(2, '0');
+  const second = '00';
+  const millisecond = '000';
+  s = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
+    document.getElementById("command_box").value += "\n" + s + " "+document.getElementById("killer").value + " kill " + document.getElementById("victim").value + " at " + document.getElementById("kill_time").value + " in " + document.getElementById("kill_place").value;
+    updateGame();
+}
   </script>
   <div style="width: 100%; overflow: hidden;">
     <div style="width 480px; float: left;">
@@ -141,9 +152,8 @@ function grantInvestigations(player, kill) {
   <br>
   Schedule a rollover at <input id="rollover_time" size="40"><button onClick=scheduleRollover()>Schedule</button>
   <br>
-  <!--
-  Post a kill: <input id="killer"> killed <input id="victim"> at time <input id="kill_time"><button onclick=shceduleKill()>
--->
+  Post a kill: <input id="killer"> killed <input id="victim"><br> at time (hh:mm) <input id="kill_time"> in place <input id="kill_place"><button onclick=scheduleKill()>Schedule Kill Post
+</button><br>
 Respond to prophets:<br>
 <div id="prophet_responses"></div>
 <br>
