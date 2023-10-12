@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import mafia
 import sys
 import json
