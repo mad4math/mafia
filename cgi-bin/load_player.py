@@ -7,7 +7,7 @@ cgitb.enable()
 
 
 d = cgi.FieldStorage()
-game_id = d.getfirst("id")
+game_id = d.getfirst("id").rstrip()
 player = d.getfirst("player")
 (game, valid, messages) = mafia.load_game(game_id)
 if player not in game["players"]:
