@@ -176,6 +176,7 @@ def player_info(game, player, messages):
                 </select>
       <button onClick=sendVote()>Send Vote</button>
       Currently voting for: <b>{}</b>
+      <input type="checkbox" onClick=sendVoteNoExecution() id="no-execution-checkbox" {}><label for="no-execution-checkbox">Vote no execution if legal</label>
     </div>
     <div id="faction-abilities">
     {}
@@ -185,7 +186,8 @@ def player_info(game, player, messages):
     </div>
     <h4> Game Log </h4>
     <div id="display" >{}</div>
-    """.format("\n".join(option(x) for x in votable), game["players"][player]["vote"],faction(game,player),role(game,player), display(game,player,messages))
+    """.format("\n".join(option(x) for x in votable), 
+        game["players"][player]["vote"], "checked" if game["players"][player]["vote_no_execution"] else "", faction(game,player),role(game,player), display(game,player,messages))
 
 def main_page(game, player, messages): 
     h="""

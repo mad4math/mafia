@@ -11,6 +11,8 @@ def update_player(d):
     command = {"action":action, "player":player}
     if action=="vote":
         command["target"]=d["target"][0]
+    if action=="vote-no-execution":
+        command["yes"]=1 if d["yes"][0]=="true" else 0
     if action=="investigate":
         command["suspect1"] = d["x"][0]
         command["suspect2"] = d["y"][0]

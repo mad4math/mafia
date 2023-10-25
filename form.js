@@ -21,6 +21,13 @@ function sendVote() {
   params = "id="+document.getElementById("id").value+"&player="+document.getElementById("player").value+"&action=vote&target="+document.getElementById("vote").value;
   xhttp.send(params); 
 }
+function sendVoteNoExecution() {
+  var xhttp = setupRequest();
+  params = "id="+document.getElementById("id").value+"&player="+document.getElementById("player").value+"&action=vote-no-execution&yes="+document.getElementById("no-execution-checkbox").checked;
+  console.log(document.getElementById("no-execution-checkbox").checked);
+  xhttp.send(params); 
+
+}
 function sendInvestigation() {
   var xhttp = setupRequest();
   params = "id="+document.getElementById("id").value+"&player="+document.getElementById("player").value+"&action=investigate&x="+
@@ -76,5 +83,4 @@ function sendActionWithTarget(action) {
   var xhttp = setupRequest();
   params = gg()+"&action="+action+"&target="+getInput("target");
   xhttp.send(params);
-
 }

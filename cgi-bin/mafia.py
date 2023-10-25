@@ -21,6 +21,7 @@ def setup(game):
     game["mafia"] = {"traps":2, "trapped":[], "untrappable":[]}
     for player in game["players"]:
         game["players"][player]["alive"] = True
+        game["players"][player]["vote_no_execution"] = False
     for player in game["players"]:
         p = game["players"][player]
         if p["team"] == "sk":
@@ -125,12 +126,13 @@ def rollover(game):
     #count the votes, and limit the saints and sinner lists.
     votes = {}
     alive = [player for player in g if g[player]["alive"]]
+    kill_today = any(game["deaths"][x]["day"] == game["day"] for x in game["deaths"])
     for player in alive:
         p = g[player]
         if p["role"] == "priest":
             p["tomorrow"]["saints"] = p["tomorrow"]["saints"][:int(len(alive)*.2+.99)]
             p["tomorrow"]["sinners"] = p["tomorrow"]["sinners"][:int(len(alive)*.2+.99)]
-        vote = g[player]["vote"]
+        vote = g[player]["vote"] if kill_today or not g[player]["vote_no_execution"] else "no-execution"
         if vote not in votes:
             votes[vote] = [player]
         else:
@@ -139,7 +141,7 @@ def rollover(game):
     #determine who is executed, and publish the results
     if game["day"] > 0:
         d = game["day"]
-        max_vote_players = [player for player in g if g[player]["alive"]] + ["no-execution"]
+        max_vote_players = random.shuffle([player for player in g if g[player]["alive"]]) + ["no-execution"]
         while d > 0 and len(max_vote_players) > 1:
             max_vote_this_day = max_vote_players
             max_vote = 0
@@ -154,7 +156,7 @@ def rollover(game):
             max_vote_players = [player for player in max_vote_players if player in max_vote_this_day]
             d -= 1
             output("test", max_vote_players)
-        execution = sorted(max_vote_players)[0]
+        execution = max_vote_players[0]
         if execution!="no-execution":
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
@@ -400,6 +402,13 @@ def submit_prophecy(game, player, prophecy):
 def submit_vote(game, player, vote):
     game["players"][player]["vote"] = vote
     output(player, "{} voted for {}".format(player, vote))
+
+def submit_vote_no_execution(game, player, yes):
+    game["players"][player]["vote_no_execution"] = yes
+    if yes:
+        output(player, "{} voting for no-execution if legal")
+    else:
+        output(player, "{} voting to execute even if no-execution is legal")
 
 def see(game, player, target, result=None):
     buddy = get_alive_buddy(game,player)
@@ -674,6 +683,8 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0],"target":l[2]}
         elif l[1] == "vote":
             return {"action":l[1],"player":l[0],"target":l[2]}
+        elif l[1] == "vote-no-execution":
+            return {"action":l[1],"player":l[0],"yes":int(l[2])}
         elif l[1] == "frame":
             return {"action":l[1],"player":l[0],"target":l[2], "kill":l[4]}
         elif l[1] == "trap":
@@ -738,6 +749,8 @@ def json_to_command(json_obj):
             return player + ' guess ' + json_obj['target']
         elif action == 'vote':
             return player + ' vote ' + json_obj['target']
+        elif action == 'vote-no-execution':
+            return player + ' vote-no-execution ' + str(json_obj['yes'])
         elif action == 'frame':
             return player + ' frame ' + json_obj['target'] + ' kill ' + json_obj['kill']
         elif action == 'trap':
@@ -824,6 +837,8 @@ def do_command(game, command):
             if command["target"]!="no-execution":
                 check_valid_player(game, command["target"])
             submit_vote(game, player, command["target"])
+        elif action == "vote-no-execution":
+            submit_vote_no_execution(game, player, command["yes"])
         elif action == "frame":
             check_valid_player(game, command["target"])
             check_valid_player(game, command["kill"])
