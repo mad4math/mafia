@@ -75,9 +75,12 @@ function sendTrap() {
   xhttp.send(params);
 }
 function sendUntrap() {
-  var xhttp = setupRequest();
-  params = gg()+"&action=untrap&target="+getInput("untrap-target");
-  xhttp.send(params);
+  if(getInput("untrap-target")) {
+    console.log(getInput("untrap-target"))
+    var xhttp = setupRequest();
+    params = gg()+"&action=untrap&target="+getInput("untrap-target");
+    xhttp.send(params);
+  }
 }
 function sendActionWithTarget(action) {
   var xhttp = setupRequest();

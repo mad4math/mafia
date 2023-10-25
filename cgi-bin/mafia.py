@@ -25,7 +25,7 @@ def setup(game):
     for player in game["players"]:
         p = game["players"][player]
         if p["team"] == "sk":
-            p["traps"] = 0
+            p["traps"] = 1
             p["trapped"] = []
             p["untrappable"] = []
             p["cooldown"] = 1
@@ -132,7 +132,7 @@ def rollover(game):
         if p["role"] == "priest":
             p["tomorrow"]["saints"] = p["tomorrow"]["saints"][:int(len(alive)*.2+.99)]
             p["tomorrow"]["sinners"] = p["tomorrow"]["sinners"][:int(len(alive)*.2+.99)]
-        vote = g[player]["vote"] if kill_today or not g[player]["vote_no_execution"] else "no-execution"
+        vote = g[player]["vote"] if (kill_today and game["day"]>1) or not g[player]["vote_no_execution"] else "no-execution"
         if vote not in votes:
             votes[vote] = [player]
         else:
@@ -141,7 +141,9 @@ def rollover(game):
     #determine who is executed, and publish the results
     if game["day"] > 0:
         d = game["day"]
-        max_vote_players = random.shuffle([player for player in g if g[player]["alive"]]) + ["no-execution"]
+        players_random = [player for player in g if g[player]["alive"]]
+        random.shuffle(players_random)
+        max_vote_players = players_random + ["no-execution"]
         while d > 0 and len(max_vote_players) > 1:
             max_vote_this_day = max_vote_players
             max_vote = 0
@@ -250,6 +252,8 @@ def get_alive_buddy(game, player):
         return game["players"][player]["buddy"]
     else:
         return player
+def trapped(game, player):
+    return any(player in game["players"][x]["trapped"] for x in game["players"] if game["players"][x]["team"]=="sk") or player in game["mafia"]["trapped"]
 
 def kill(game, killer, victim, time, location):
     if game["players"][killer]["roleblocked"]:
@@ -261,18 +265,20 @@ def kill(game, killer, victim, time, location):
     #handle priests
     for player in game["players"]:
         p = game["players"][player]
+        if trapped(game, player) and p["role"] == "prophet":
+            grant_prophet_investigations(game, player, victim, False, False, False)
         if p["role"] == "priest" and p["active"] and p["alive"]:
             buddy = get_alive_buddy(game, player)
             b = game["players"][buddy]
             sinners = p["today"]["sinners"]+b["today"]["sinners"]
             saints = p["today"]["saints"]+b["today"]["saints"]
-            if killer in saints and victim in sinners and (USE_BUDDY or player not in game["mafia"]["trapped"]):
+            if killer in saints and victim in sinners and (USE_BUDDY or not trapped(game, player)):
                 game["deaths"][victim]["killer"] = ""
                 #p["role"] = "none"
                 p["active"] = False
                 b["active"] = False
                 output_player_buddy(game, player, "A saint killed {}! You lose your role powers for the rest of game, and the culprit will be innocent for all investigations.".format(victim))
-            elif killer in sinners and victim in saints and (USE_BUDDY or player not in game["mafia"]["trapped"]):
+            elif killer in sinners and victim in saints and (USE_BUDDY or not trapped(game, player)):
                 output_player_buddy(game, player, "A sinner killed {}!".format(victim))
             elif victim in saints:
                 output_player_buddy(game, player, "{} wasn't killed by any of {}".format(victim,p["today"]["sinners"]))
@@ -333,7 +339,7 @@ def untrap(game, player, target):
         trap_source_name = player
     if not target in trap_source["trapped"]:
         raise IllegalAction("You didn't trap that person in the first place!")
-    trap_source["trapped"] = [p for p in game["mafia"]["trapped"] if p!=target]
+    trap_source["trapped"] = [p for p in trap_source["trapped"] if p!=target]
     output(trap_source_name, "You released {} from their trap".format(target))
 
 
@@ -342,9 +348,6 @@ def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, 
     game["players"][buddy]["investigations"][kill] = 2*(correctPerson + correctPlace + correctTime)
     l = (["time"] if correctTime else []) + (["location"] if correctPlace else []) + (["person"] if correctPerson else [])
     game["players"][player]["resolved"][kill] = 1
-    if player in game["mafia"]["trapped"]:
-        game["players"][player]["investigations"][kill] = 0
-        l = []
     if l:
         output(buddy, "{} correctly identified the correct {} for the death of {}. You now have {} investigations you can use on this death".format(player, ", ".join(l), kill, game["players"][player]["investigations"][kill]))
     else:
@@ -406,9 +409,9 @@ def submit_vote(game, player, vote):
 def submit_vote_no_execution(game, player, yes):
     game["players"][player]["vote_no_execution"] = yes
     if yes:
-        output(player, "{} voting for no-execution if legal")
+        output(player, "voting for no-execution if legal")
     else:
-        output(player, "{} voting to execute even if no-execution is legal")
+        output(player, "voting to execute even if no-execution is legal")
 
 def see(game, player, target, result=None):
     buddy = get_alive_buddy(game,player)
@@ -422,10 +425,12 @@ def see(game, player, target, result=None):
         game["players"][player]["uses"] -= 1
         if game["players"][player]["team"] == "mafia" and not USE_BUDDY:
             game["mafia"]["untrappable"] += [target]
-        possible_results = roles if player in game["mafia"]["trapped"] else [game["players"][target]["role"]]
+        if game["players"][player]["team"] == "sk":
+            game["players"][player]["untrappable"] += [target]
+        possible_results = roles if trapped(game, player) else [game["players"][target]["role"]]
         #possible_results = [game["players"][target]["role"]]
         if result==None:
-            result = random.choice(roles) if player in game["mafia"]["trapped"] else game["players"][target]["role"]
+            result = random.choice(possible_results)
         if result not in possible_results:
             raise IllegalAction("{} is not a possible result for {} to see as the role of {}".format(result, player, target))
         else:
@@ -484,7 +489,7 @@ def do_investigation(game, player, x, y, z, w):
     """doesn't check for legality, subroutine of investigate"""
     buddy = get_alive_buddy(game,player)
     
-    if player in game["mafia"]["trapped"] and not USE_BUDDY:
+    if trapped(game,player) and not USE_BUDDY:
         w = random.choice([x,y])
         output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
         return (x,y,z,w)

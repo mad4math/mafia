@@ -18,6 +18,8 @@
            gameState = JSON.parse(this.responseText.split("$")[4]);
            updateDayEndMessage();
            updateProphetResponses();
+           createKillInputs();
+           document.getElementById("rollover_time").value = getCurrentDateRolloverTime();
         }
 
     }
@@ -51,16 +53,27 @@
         updateGame();
     }
     function getCurrentDateTime() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hour = String(now.getHours()).padStart(2, '0');
-  const minute = String(now.getMinutes()).padStart(2, '0');
-  const second = String(now.getSeconds()).padStart(2, '0');
-  const millisecond = String(now.getMilliseconds()).padStart(3, '0');
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
-}
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hour = String(now.getHours()).padStart(2, '0');
+      const minute = String(now.getMinutes()).padStart(2, '0');
+      const second = String(now.getSeconds()).padStart(2, '0');
+      const millisecond = String(now.getMilliseconds()).padStart(3, '0');
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
+    }
+    function getCurrentDateRolloverTime() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hour = String(23).padStart(2, '0');
+      const minute = String(1).padStart(2, '0');
+      const second = String(0).padStart(2, '0');
+      const millisecond = String(0).padStart(3, '0');
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
+    }
 function get_game_id() {
     var e = document.getElementsByName('game_id');
     for (i = 0; i < e.length; i++) {
@@ -124,17 +137,28 @@ function grantInvestigations(player, kill) {
 }
 function scheduleKill() {
     kill_time = document.getElementById("kill_time").value.split(/\:|\-/g);
+    kill_hour = parseInt(kill_time[0]);
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate() + (kill_time[0]==23?1:0)).padStart(2, '0');
-  const hour = String((parseInt(kill_time[0])+1)%24).padStart(2, '0');
-  const minute = String(kill_time[1]).padStart(2, '0');
+  const hour = String((kill_hour==21 || kill_hour==22)?22:(kill_hour+1)%24).padStart(2, '0');
+  const minute = String(kill_hour==21?0:kill_time[1]).padStart(2, '0');
   const second = '00';
   const millisecond = '000';
   s = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}000`;
-    document.getElementById("command_box").value += "\n" + s + " "+document.getElementById("killer").value + " kill " + document.getElementById("victim").value + " at " + document.getElementById("kill_time").value + " in " + document.getElementById("kill_place").value;
+    document.getElementById("command_box").value += "\n" + s + " "+document.getElementById("killer").value + " kill " + document.getElementById("victim").value + " at " + document.getElementById("kill_time").value + " in \"" + document.getElementById("kill_place").value + "\"";
     updateGame();
+}
+function createKillInputs() {
+    r = "";
+    for(player in gameState.players) {
+        if(gameState.players[player].alive) {
+            r += `<option value=${player}>${player}</option>`
+        }
+    }
+    document.getElementById("killer").innerHTML = r;
+    document.getElementById("victim").innerHTML = r;
 }
   </script>
   <div style="width: 100%; overflow: hidden;">
@@ -152,7 +176,7 @@ function scheduleKill() {
   <br>
   Schedule a rollover at <input id="rollover_time" size="40"><button onClick=scheduleRollover()>Schedule</button>
   <br>
-  Post a kill: <input id="killer"> killed <input id="victim"><br> at time (hh:mm) <input id="kill_time"> in place <input id="kill_place"><button onclick=scheduleKill()>Schedule Kill Post
+  Post a kill: <select id="killer"></select> killed <select id="victim"></select><br> at time (hh:mm) <input id="kill_time"> in place <input id="kill_place"><button onclick=scheduleKill()>Schedule Kill Post
 </button><br>
 Respond to prophets:<br>
 <div id="prophet_responses"></div>
