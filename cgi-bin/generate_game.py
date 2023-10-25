@@ -2,15 +2,12 @@
 import mafia
 import sys
 import json
-import cgi
-import cgitb
 import os
 import create_page
 import datetime
-cgitb.enable()
 
 
-def generate_game(game_id, player_list, mafia_count):
+def generate_game_a(game_id, player_list, mafia_count):
     game = {"players":mafia.generate_players(player_list,int(mafia_count)), "id":game_id}
     if game_id not in os.listdir(mafia.get_game_file_location(None)):
         pass
@@ -21,18 +18,17 @@ def generate_game(game_id, player_list, mafia_count):
         for p in player_list:
             out.write(p)
 
+def generate_game(d):
 
+    game_id = d["game_id"][0]
 
-d = cgi.FieldStorage()
-game_id = d.getfirst("game_id")
+    player_list = [x.rstrip() for x in d["players"][0].split("\n") if x.rstrip()]
+    mafia_count = d["mafia_count"][0]
+    generate_game_a(game_id,player_list,mafia_count)
+    (game, valid, messages) = mafia.save_game(game_id, [{"time":str(datetime.datetime.now()), "command":{"action":"setup", "name":game_id}}])
 
-player_list = [x.rstrip() for x in d.getfirst("players").split("\n") if x.rstrip()]
-mafia_count = d.getfirst("mafia_count")
-generate_game(game_id,player_list,mafia_count)
-(game, valid, messages) = mafia.save_game(game_id, [{"time":str(datetime.datetime.now()), "command":{"action":"setup", "name":game_id}}])
-
-print("Content-type: text/html\n")
-print("""<meta http-equiv="Refresh" content="0; url='../admin.html'" />""")
+    print("Content-type: text/html\n")
+    print("""<meta http-equiv="Refresh" content="0; url='../admin.html'" />""")
 
 
 

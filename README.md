@@ -1,6 +1,6 @@
-#### To start a local server
+#### To start a server
 
 ```
-python -m http.server --cgi
+python cgi-bin/server.py [hostname] [port]
 ```
 

@@ -24,7 +24,7 @@
     function loadGame() {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = receiveGameState;
-        xhttp.open("GET", "cgi-bin/load_admin.py?id="+get_game_id(), true);
+        xhttp.open("GET", "load-admin?id="+get_game_id(), true);
         xhttp.send();
     };
     String.prototype.replaceAll = function(search, replacement) {
@@ -35,7 +35,7 @@
     function updateGame() {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = receiveGameState;
-    xhttp.open("POST", "cgi-bin/save_admin.py", true);
+    xhttp.open("POST", "save-admin", true);
     xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     params = "id="+get_game_id()+"&count="+count+"&commands="+document.getElementById("command_box").value;
     xhttp.send(params);
@@ -82,7 +82,7 @@ xhttp.onreadystatechange = function() {
         game_id_selection.innerHTML = s;
     }
 };
-xhttp.open("GET", "cgi-bin/get_games.py", true);
+xhttp.open("GET", "get-games", true);
 xhttp.send();
 
 function scheduleRollover() {

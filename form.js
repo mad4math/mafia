@@ -6,7 +6,7 @@ var xhttp = new XMLHttpRequest();
              document.getElementById("player-info").innerHTML = xhttp.responseText;
       }
   };
-  xhttp.open("POST", "update_player.py", true);
+  xhttp.open("POST", "update-player", true);
   xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   return xhttp;
 }

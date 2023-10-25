@@ -1,42 +1,39 @@
 #!/usr/bin/python
-import cgi
 import mafia
-import cgitb
 import create_page
 import datetime
-cgitb.enable()
 
-d = cgi.FieldStorage()
-game_id = d.getfirst("id")
-player = d.getfirst("player")
-action = d.getfirst("action")
-command = {"action":action, "player":player}
-if action=="vote":
-    command["target"]=d.getfirst("target")
-if action=="investigate":
-    command["suspect1"] = d.getfirst("x")
-    command["suspect2"] = d.getfirst("y")
-    command["kill"] = d.getfirst("z")
-    if d.getfirst("w"):
-        command["result"] = d.getfirst("w")
-if action=="predicts":
-    command["prophecy"] = d.getfirst("prophecy")
-if action=="roleblock":
-    command["target"]=d.getfirst("target")
-if action=="priest":
-    if d.getfirst("sinners"):
-        command["mode"] = "sinners"
-        command["list"] = d.getfirst("sinners").split(" ")
-    elif d.getfirst("saints"):
-        command["mode"] = "saints"
-        command["list"] = d.getfirst("saints").split(" ")
-if action=="guess":
-    command["target"]=d.getfirst("target")
-if action=="seer":
-    command["target"]=d.getfirst("target")
-if action=="trap":
-    command["target"]=d.getfirst("target")
-    command["guess"]=d.getfirst("guess")
-(game, valid, messages) = mafia.run_commands_and_save(game_id,[command])
-print("Content-type: text/html\n")
-print(create_page.player_info(game,player,messages))
+def update_player(d):
+
+    game_id = d["id"][0]
+    player = d["player"][0]
+    action = d["action"][0]
+    command = {"action":action, "player":player}
+    if action=="vote":
+        command["target"]=d["target"][0]
+    if action=="investigate":
+        command["suspect1"] = d["x"][0]
+        command["suspect2"] = d["y"][0]
+        command["kill"] = d["z"][0]
+        if d["w"][0]:
+            command["result"] = d["w"][0]
+    if action=="predicts":
+        command["prophecy"] = d["prophecy"][0]
+    if action=="roleblock":
+        command["target"]=d["target"][0]
+    if action=="priest":
+        if d["sinners"][0]:
+            command["mode"] = "sinners"
+            command["list"] = d["sinners"][0].split(" ")
+        elif d["saints"][0]:
+            command["mode"] = "saints"
+            command["list"] = d["saints"][0].split(" ")
+    if action=="guess":
+        command["target"]=d["target"][0]
+    if action=="seer":
+        command["target"]=d["target"][0]
+    if action=="trap":
+        command["target"]=d["target"][0]
+        command["guess"]=d["guess"][0]
+    (game, valid, messages) = mafia.run_commands_and_save(game_id,[command])
+    return create_page.player_info(game,player,messages)
