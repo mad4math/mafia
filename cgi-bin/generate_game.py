@@ -7,8 +7,8 @@ import create_page
 import datetime
 
 
-def generate_game_a(game_id, player_list, mafia_count):
-    game = {"players":mafia.generate_players(player_list,int(mafia_count)), "id":game_id}
+def generate_game_a(game_id, player_list, mafia_count, sk_count):
+    game = {"players":mafia.generate_players(player_list,int(mafia_count),sk=int(sk_count)), "id":game_id}
     if game_id not in os.listdir(mafia.get_game_file_location(None)):
         pass
         os.mkdir(mafia.get_game_file_location(None)+game_id)
@@ -24,7 +24,7 @@ def generate_game(d):
 
     player_list = [x.rstrip() for x in d["players"][0].split("\n") if x.rstrip()]
     mafia_count = d["mafia_count"][0]
-    generate_game_a(game_id,player_list,mafia_count)
+    generate_game_a(game_id,player_list,mafia_count, d["sk_count"][0])
     (game, valid, messages) = mafia.save_game(game_id, [{"time":str(datetime.datetime.now()), "command":{"action":"setup", "name":game_id}}])
 
     print("Content-type: text/html\n")

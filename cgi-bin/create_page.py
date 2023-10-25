@@ -149,6 +149,7 @@ def faction(game, player):
         """
         #        days remaining until you may next kill: <b>{}</b>""".format(game["players"][player]["cooldown"])
         a += trap_interface(game["players"][player]["traps"], game["players"][player]["trapped"])
+        return a
     else:
         if mafia.USE_BUDDY:
             a = """

@@ -72,7 +72,7 @@ class MyServer(SimpleHTTPRequestHandler):
             response = "bad post request"
         self.send_header("Content-Length", str(len(response)))
         self.end_headers()
-        wfile.write(bytes(response, "utf-8"))
+        self.wfile.write(bytes(response, "utf-8"))
 
 
 
