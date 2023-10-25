@@ -45,6 +45,12 @@ class MyServer(SimpleHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             out.write(response)
+        elif path == "":
+            response = """<meta http-equiv="Refresh" content="0; url='mafia.html'" />"""
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            out.write(response)
         else:
             super().do_GET()
         out.detach()
@@ -52,7 +58,6 @@ class MyServer(SimpleHTTPRequestHandler):
     def do_POST(self):
         url = urllib.parse.urlparse(self.path)
         path = url.path[1:]
-        out = io.TextIOWrapper(self.wfile)
         d = urllib.parse.parse_qs(str(self.rfile.read(int(self.headers["Content-Length"])), "utf-8"))
         if path == "update-player":
             response = update_player.update_player(d)
@@ -67,8 +72,7 @@ class MyServer(SimpleHTTPRequestHandler):
             response = "bad post request"
         self.send_header("Content-Length", str(len(response)))
         self.end_headers()
-        out.write(response)
-        out.detach()
+        wfile.write(bytes(response, "utf-8"))
 
 
 

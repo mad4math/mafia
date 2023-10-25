@@ -23,6 +23,11 @@ def setup(game):
         game["players"][player]["alive"] = True
     for player in game["players"]:
         p = game["players"][player]
+        if p["team"] == "sk":
+            p["traps"] = 0
+            p["trapped"] = []
+            p["untrappable"] = []
+            p["cooldown"] = 1
         output(player, "{} is a {}".format(player, p["role"]))
         output(player, "{} is <b>{}</b>".format(player, p["team"]))
         p["roleblocked"] = False
@@ -53,7 +58,7 @@ def setup(game):
     output("mafia","{} are the mafia ".format(",".join(x for x in game["players"] if game["players"][x]["team"]=="mafia")))
 
 
-def generate_players(players,mafia):
+def generate_players(players,mafia,sk=0):
     """
     players is a list of player names
     m is a mafia count
@@ -75,6 +80,10 @@ def generate_players(players,mafia):
                 result[p]["team"]="mafia"
                 role = random.choice(roles+straight_roles)
                 m -= 1
+            elif sk>0:
+                result[p]["team"]="sk"
+                role = random.choice(roles+straight_roles)
+                sk -= 1
             else:
                 result[p]["team"]="town"
                 if USE_BUDDY:
@@ -179,6 +188,9 @@ def rollover(game):
     #perform the upkeep for all living players
     for player in alive:
         p = g[player]
+        if p["team"] == "sk":
+            if p["cooldown"] > 0:
+                p["cooldown"] -= 1
         if p["role"] == "investigator":
             p["investigations"] = 2
         elif p["role"] == "vigilante":
@@ -213,6 +225,9 @@ def rollover(game):
             p["uses"] = 1
     game["day"] += 1
     output("public","day {} begins!".format(game["day"]))
+    # handle rollblocked players
+    # commented out because rollblockers don't exist anymore
+    """
     for player in alive:
         p = g[player]
         if p["roleblocked"]:
@@ -225,6 +240,7 @@ def rollover(game):
             elif p["role"] == "prophet":
                 p["tomorrow"] = ""
             output(player, "{} is roleblocked for day {}".format(player, game["day"]))
+    """
     return r + ["rollover"]
 
 def get_alive_buddy(game, player):
@@ -238,6 +254,9 @@ def kill(game, killer, victim, time, location):
         raise IllegalAction()
     game["deaths"][victim] = {"killer":killer,"location":location,"time":time,"investigations":[],"framed":[],"true_killer":killer, "day":game["day"]}
     game["players"][victim]["alive"] = False
+    if game["players"][killer]["team"] == "sk":
+        game["players"][killer]["cooldown"] = 3
+    #handle priests
     for player in game["players"]:
         p = game["players"][player]
         if p["role"] == "priest" and p["active"] and p["alive"]:
@@ -281,27 +300,39 @@ def trap_buddy(game, player, target, guess):
         output("mafia", "You failed to trap {} as {}".format(target, guess))
 
 def trap_role(game, player, target, guess):
-    if game["players"][player]["team"] != "mafia":
+    if game["players"][player]["team"] == "town":
         raise IllegalAction("Only mafia can set traps!")
-    if game["mafia"]["traps"] < 1:
-        raise IllegalAction("Mafia are out of traps!")
-    if target in game["mafia"]["untrappable"]:
+    if game["players"][player]["team"] == "mafia":
+        trap_source = game["mafia"]
+        trap_source_name = "mafia"
+    else:
+        trap_source = game["players"][player]
+        trap_source_name = player
+    if trap_source["traps"] < 1:
+        raise IllegalAction("You are out of traps!")
+    if target in trap_source["untrappable"]:
         raise IllegalAction("Mafia can't trap someone they've Seen!")
     if game["players"][target]["role"] == guess:
-        game["mafia"]["trapped"] += [target]
-        output("mafia", "You successfully trapped {} as {}. Their role now will silently fail.".format(target, guess))
+        trap_source["trapped"] += [target]
+        output(trap_source_name, "You successfully trapped {} as {}. Their role now will silently fail.".format(target, guess))
     else:
-        game["mafia"]["traps"] -= 1
-        output("mafia", "You failed to trap {} as {}".format(target, guess))
+        trap_source["traps"] -= 1
+        output(trap_source_name, "You failed to trap {} as {}".format(target, guess))
 
 
 def untrap(game, player, target):
-    if game["players"][player]["team"] != "mafia":
-        raise IllegalAction("Only mafia can set traps!")
-    if not target in game["mafia"]["trapped"]:
+    if game["players"][player]["team"] == "town":
+        raise IllegalAction("Only mafia can unset traps!")
+    if game["players"][player]["team"] == "mafia":
+        trap_source = game["mafia"]
+        trap_source_name = "mafia"
+    else:
+        trap_source = game["players"][player]
+        trap_source_name = player
+    if not target in trap_source["trapped"]:
         raise IllegalAction("You didn't trap that person in the first place!")
-    game["mafia"]["trapped"] = [p for p in game["mafia"]["trapped"] if p!=target]
-    output("mafia", "You released {} from their trap".format(target))
+    trap_source["trapped"] = [p for p in game["mafia"]["trapped"] if p!=target]
+    output(trap_source_name, "You released {} from their trap".format(target))
 
 
 def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, correctPerson):

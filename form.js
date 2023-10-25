@@ -67,6 +67,11 @@ function sendTrap() {
   params = gg()+"&action=trap&target="+getInput("trap-target")+"&guess="+getInput("trap-guess");
   xhttp.send(params);
 }
+function sendUntrap() {
+  var xhttp = setupRequest();
+  params = gg()+"&action=untrap&target="+getInput("untrap-target");
+  xhttp.send(params);
+}
 function sendActionWithTarget(action) {
   var xhttp = setupRequest();
   params = gg()+"&action="+action+"&target="+getInput("target");

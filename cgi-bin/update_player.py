@@ -35,5 +35,7 @@ def update_player(d):
     if action=="trap":
         command["target"]=d["target"][0]
         command["guess"]=d["guess"][0]
+    if action=="untrap":
+        command["target"]=d["target"][0]
     (game, valid, messages) = mafia.run_commands_and_save(game_id,[command])
     return create_page.player_info(game,player,messages)

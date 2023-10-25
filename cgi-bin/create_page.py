@@ -125,6 +125,13 @@ def faction(game, player):
     alive_options = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"])
     role_options = "\n".join(option(x) for x in mafia.roles)
     all_players_options = "\n".join(option(x) for x in player_list(game))
+    def trap_interface(count, trapped):
+        return """
+            Use a trap: Trap <select id="trap-target">{}</select> as <select id="trap-guess">{}</select> 
+            <button onclick="sendTrap()">Trap!</button> Traps left: <b>{}</b><br>
+            Untrap a player: <select id="untrap-target">{}</select><button onclick="sendUntrap()">Untrap</button>
+            """.format(alive_options, role_options, count, "\n".join(option(x) for x in trapped))
+
     if game["players"][player]["team"]=="mafia":
         a = """
         You are the mafia! The mafia team is <b>{}</b><br>""".format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"))
@@ -134,11 +141,14 @@ def faction(game, player):
             <button onclick="sendTrap()">Trap!</button> Traps left: <b>{}</b>
             """.format(alive_options, all_players_options, game["mafia"]["traps"])
         else:
-            a += """
-            Use a trap: Trap <select id="trap-target">{}</select> as <select id="trap-guess">{}</select> 
-            <button onclick="sendTrap()">Trap!</button> Traps left: <b>{}</b>
-            """.format(alive_options, role_options, game["mafia"]["traps"])
+            a += trap_interface(game["mafia"]["traps"], game["mafia"]["trapped"])
         return a
+    elif game["players"][player]["team"]=="sk":
+        a = """
+        You are a serial killer. You are on the mafia's team, but you don't know who the mafia are. You may kill once every 3 game days, starting day 1.<br>
+        """
+        #        days remaining until you may next kill: <b>{}</b>""".format(game["players"][player]["cooldown"])
+        a += trap_interface(game["players"][player]["traps"], game["players"][player]["trapped"])
     else:
         if mafia.USE_BUDDY:
             a = """
