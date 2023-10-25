@@ -162,21 +162,21 @@ function createKillInputs() {
 }
   </script>
   <div style="width: 100%; overflow: hidden;">
-    <div style="width 480px; float: left;">
+    <div style="width 550px; float: left;">
   game ID: <br><div id="game_id_selection"></div>
 
   <!--<input id="game_id" value="test1">-->
   <button onClick=loadGame()>Load game</button>
   <a href="newgame.html">new game</a>
   <br>
-  <textarea name="commands" id="command_box" rows="35" cols="65"></textarea>
+  <textarea name="commands" id="command_box" rows="35" cols="72"></textarea>
   <br>
   <button onClick=updateGame()>Update game</button>
   <button onClick=addIntros()>Add all intros</button>
   <br>
   Schedule a rollover at <input id="rollover_time" size="40"><button onClick=scheduleRollover()>Schedule</button>
   <br>
-  Post a kill: <select id="killer"></select> killed <select id="victim"></select><br> at time (hh:mm) <input id="kill_time"> in place <input id="kill_place"><button onclick=scheduleKill()>Schedule Kill Post
+  Post a kill: <select id="killer"></select> killed <select id="victim"></select><br> at time (hh:mm) <input id="kill_time"> in place <input id="kill_place"><br><button onclick=scheduleKill()>Schedule Kill Post
 </button><br>
 Respond to prophets:<br>
 <div id="prophet_responses"></div>
@@ -189,7 +189,7 @@ Respond to prophets:<br>
 
   </div>
 </div>
-  <div id="display" style="margin-left:500px;"></div>
+  <div id="display" style="margin-left:550px;"></div>
   </div>
 </body>
 </html>
