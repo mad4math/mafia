@@ -56,13 +56,16 @@ def role(game, player):
         You predict that <select id=victim>{}</select> will die at (time) <input id="time"> in (location) <input id="place">
         <button onclick="sendProphecy()">Submit Prophecy</button>
         <br>
+        Prediction for tomorrow: <b>{}</b><br>
+        Prediction for today (made yesterday): <b>{}</b>
+        <br>
         Investigations remaining:<br>
         {}
         <br>
         Submit an investigation:
         <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
         <button onclick="sendInvestigation()">Investigate</button>
-        """.format(alive_options, "\n<br>".join("<b>"+target+": "+str(p["investigations"][target])+"</b>" for target in p["investigations"]),
+        """.format(alive_options, p["prophecies"][game["day"]], p["prophecies"][game["day"]-1], "\n<br>".join("<b>"+target+": "+str(p["investigations"][target])+"</b>" for target in p["investigations"]),
          all_players_options, all_players_options, deaths_options_a, m) + """<br>
         prophecy for today that you made yesterday: {}<br>
         prophecy for tomorrow: {}
@@ -145,7 +148,7 @@ def faction(game, player):
         return a
     elif game["players"][player]["team"]=="sk":
         a = """
-        You are a serial killer. You are on the mafia's team, but you don't know who the mafia are. You may kill once every 3 game days, starting day 1.<br>
+        You are a serial killer. You are on the mafia's team, but you don't know who the mafia are. You may kill once every 2 game days, starting day 1.<br>
         """
         #        days remaining until you may next kill: <b>{}</b>""".format(game["players"][player]["cooldown"])
         a += trap_interface(game["players"][player]["traps"], game["players"][player]["trapped"])

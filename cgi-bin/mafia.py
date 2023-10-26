@@ -68,12 +68,14 @@ def generate_players(players,mafia,sk=0):
     random.seed(s)
     #print(s)
     last_gay = None
+    serial_killers = sk
     result = {}
     while not result or (last_gay and not USE_BUDDY):
         random.shuffle(players)
         result = {}
         last_gay = None
         m = mafia
+        sk = serial_killers
         for p in players:
             result[p] ={}
             result[p]["buddy"]=""
@@ -318,7 +320,7 @@ def trap_role(game, player, target, guess):
         trap_source_name = player
     if trap_source["traps"] < 1:
         raise IllegalAction("You are out of traps!")
-    if target in trap_source["untrappable"]:
+    if target in game["mafia"]["untrappable"]:
         raise IllegalAction("Mafia can't trap someone they've Seen!")
     if game["players"][target]["role"] == guess:
         trap_source["trapped"] += [target]
@@ -426,7 +428,7 @@ def see(game, player, target, result=None):
         if game["players"][player]["team"] == "mafia" and not USE_BUDDY:
             game["mafia"]["untrappable"] += [target]
         if game["players"][player]["team"] == "sk":
-            game["players"][player]["untrappable"] += [target]
+            game["mafia"]["untrappable"] += [target]
         possible_results = roles if trapped(game, player) else [game["players"][target]["role"]]
         #possible_results = [game["players"][target]["role"]]
         if result==None:
@@ -486,7 +488,8 @@ def investigate(game,player, x, y, z, w=None):
     else:
         raise IllegalAction("Can't investigate because you aren't an investigator or a prophet!")
 def do_investigation(game, player, x, y, z, w):
-    """doesn't check for legality, subroutine of investigate"""
+    """doesn't check for legality, subroutine of investigate
+    returns (x,y,z,w) = (suspect1, suspect2, death, result)"""
     buddy = get_alive_buddy(game,player)
     
     if trapped(game,player) and not USE_BUDDY:
@@ -508,18 +511,19 @@ def do_investigation(game, player, x, y, z, w):
         legal = [x]
     else:
         legal = [x,y]
-    if w:
-        if w not in legal:
-            raise IllegalAction("That result could never occur!")
+    for i in game["deaths"][z]["investigations"]:
+        if (i[0] == x and i[1] == y) or (i[1] == x and i[0] == y):
+            legal = [i[2]]
+            break
+    if w and w not in [x,y]:
+        raise IllegalAction("That's not a possible result! {} isn't one of the suspects!".format(w))
+    if w and w not in legal:
+        output(buddy, "Investigation of {},{} for {} can't produce the result {}".format(x,y,z,w))
     else:
-        for i in game["deaths"][z]["investigations"]:
-            if (i[0] == x and i[1] == y) or (i[1] == x and i[0] == y):
-                w = i[2]
-                break
         if not w:
             w = random.choice(legal)
-    output(buddy, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
-    game["deaths"][z]["investigations"] += [[x,y,w]]
+        output(buddy, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
+        game["deaths"][z]["investigations"] += [[x,y,w]]
     return (x, y, z, w)
 
 messages = []
@@ -736,7 +740,7 @@ def json_to_command(json_obj):
         elif action == 'seer':
             command = player + ' seer ' + json_obj['target']
             if 'result' in json_obj:
-                command += ' result ' + json_obj['result'] + ' '
+                command += ' result "' + json_obj['result'] + '"'
             return command
         elif action == 'kill':
             return player + ' kill ' + json_obj['target'] + ' at ' + json_obj['time'] + ' in "' + json_obj['location'] + '"'

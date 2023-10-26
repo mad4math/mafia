@@ -116,7 +116,7 @@ function updateDayEndMessage() {
 function updateProphetResponses() {
     s = "";
     for(player in gameState.players) {
-        if(gameState.players[player].role == "prophet") {
+        if(gameState.players[player].role == "prophet" && gameState.players[player].alive) {
             for(kill in gameState.deaths) {
                 if(!(kill in gameState.players[player].resolved)) {
                     s += `Which of these are true of this prophecy by ${player} for ${kill}?: ${gameState.players[player].prophecies[gameState.deaths[kill].day-1]}<br>`;

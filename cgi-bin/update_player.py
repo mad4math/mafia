@@ -17,17 +17,17 @@ def update_player(d):
         command["suspect1"] = d["x"][0]
         command["suspect2"] = d["y"][0]
         command["kill"] = d["z"][0]
-        if d["w"][0]:
+        if "w" in d:
             command["result"] = d["w"][0]
     if action=="predicts":
         command["prophecy"] = d["prophecy"][0]
     if action=="roleblock":
         command["target"]=d["target"][0]
     if action=="priest":
-        if d["sinners"][0]:
+        if "sinners" in d:
             command["mode"] = "sinners"
             command["list"] = d["sinners"][0].split(" ")
-        elif d["saints"][0]:
+        elif "saints" in d:
             command["mode"] = "saints"
             command["list"] = d["saints"][0].split(" ")
     if action=="guess":
