@@ -763,7 +763,7 @@ def json_to_command(json_obj):
         elif action == 'frame':
             return player + ' frame ' + json_obj['target'] + ' kill ' + json_obj['kill']
         elif action == 'trap':
-            return player + ' trap ' + json_obj['target'] + ' guess ' + (json_obj['guess'] if json_obj['guess'] else "")
+            return player + ' trap ' + json_obj['target'] + ' guess "' + (json_obj['guess'] if json_obj['guess'] else "") + '"'
         elif action == 'untrap':
             return player + ' untrap ' + json_obj['target']
         elif action == 'intro':
