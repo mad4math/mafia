@@ -1,6 +1,6 @@
 import mafia
 
-option = lambda x:"<option value={}>{}</option>".format(x,x)
+option = lambda x:"<option value=\"{}\">{}</option>".format(x,x)
 player_list = lambda game:sorted(game["players"])
 
 def role(game, player):
