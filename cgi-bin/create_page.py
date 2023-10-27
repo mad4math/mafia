@@ -21,7 +21,7 @@ def role(game, player):
     if p["role"]=="investigator":
         m = ""
         mf = ""
-        if p["team"] == "mafia":
+        if p["team"] == "mafia" or p["team"] == "sk":
             m = """
             with result <select id="w">{}</select>
             """.format(option("")+all_players_options)
@@ -47,7 +47,7 @@ def role(game, player):
     elif p["role"] == "prophet":
         deaths_options_a = "\n".join(option(x) for x in game["deaths"] if (x in p["investigations"] and p["investigations"][x]))
         m = ""
-        if p["team"] == "mafia":
+        if p["team"] == "mafia" or p["team"] == "sk":
             m = """
             with result <select id="w">{}</select>
             """.format(option("")+all_players_options)
