@@ -257,6 +257,18 @@ def get_alive_buddy(game, player):
 def trapped(game, player):
     return any(player in game["players"][x]["trapped"] for x in game["players"] if game["players"][x]["team"]=="sk") or player in game["mafia"]["trapped"]
 
+def check_sk_mafia_promotion(game):
+    living_sk = [player for player in game["players"] if game["players"][player]["team"] == "sk" and game["players"][player]["alive"]]
+    if not any(game["players"][player]["team"] == "mafia" and game["players"][player]["alive"] for player in game["players"]):
+        new_mafia = random.choice(living_sk)
+
+def promote_to_mafia(game, player):
+    if game["players"][player]["team"] == "sk":
+        game["mafia"]["trapped"] += game["players"][player]["trapped"]
+        game["mafia"]["untrappable"] += game["players"][player]["untrappable"]
+        #game["mafia"]["traps"] += game["players"][player]["traps"]
+    game["players"][player]["team"] = "mafia"
+
 def kill(game, killer, victim, time, location):
     if game["players"][killer]["roleblocked"]:
         raise IllegalAction()
@@ -704,6 +716,8 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0]}
         elif l[1] == "drop":
             return {"action":l[1],"player":l[0]}
+        elif l[1] == "conscript":
+            return {"action":l[1],"player":l[0]}
         raise IllegalAction("bad syntax command not recognized:"+command)
 
 
@@ -770,6 +784,8 @@ def json_to_command(json_obj):
             return player + ' intro'
         elif action == 'drop':
             return player + ' drop'
+        elif action == 'conscript':
+            return player + ' conscript'
         else:
             raise ValueError('Invalid action type: ' + action)
 
@@ -869,6 +885,8 @@ def do_command(game, command):
             game["players"][player]["intro"]=1
         elif action == "drop":
             game["players"][player]["alive"]=0
+        elif action == "conscript":
+            promote_to_mafia(game, player)
     return (game, command)
 
 if __name__=="__main__":
