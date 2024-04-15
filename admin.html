@@ -160,6 +160,149 @@ function createKillInputs() {
     document.getElementById("killer").innerHTML = r;
     document.getElementById("victim").innerHTML = r;
 }
+
+function rollover(game) {
+  const r = [];
+  const g = game.players;
+
+  // Count the votes, and limit the saints and sinners lists.
+  const votes = {};
+  const alive = Object.keys(g).filter((player) => g[player].alive);
+  const killToday = game.deaths.some((x) => x.day === game.day);
+
+  for (const player of alive) {
+    const p = g[player];
+
+    if (p.role === "priest") {
+      p.tomorrow.saints = p.tomorrow.saints.slice(0, Math.ceil(alive.length * 0.2));
+      p.tomorrow.sinners = p.tomorrow.sinners.slice(0, Math.ceil(alive.length * 0.2));
+    }
+
+    const vote = (killToday && game.day > 1) || !p.vote_no_execution ? p.vote : "no-execution";
+
+    if (!votes[vote]) {
+      votes[vote] = [player];
+    } else {
+      votes[vote].push(player);
+    }
+  }
+
+  game.votes.push(votes);
+
+  // Determine who is executed, and publish the results.
+  if (game.day > 0) {
+    let d = game.day;
+    const playersRandom = alive.slice();
+    shuffleArray(playersRandom);
+
+    let maxVotePlayers = playersRandom.concat("no-execution");
+
+    while (d > 0 && maxVotePlayers.length > 1) {
+      let maxVoteThisDay = maxVotePlayers;
+      let maxVote = 0;
+
+      for (const player of game.votes[d]) {
+        if (!maxVotePlayers.includes(player)) {
+          continue;
+        }
+
+        if (game.votes[d][player].length > maxVote) {
+          maxVoteThisDay = [player];
+          maxVote = game.votes[d][player].length;
+        } else if (game.votes[d][player].length === maxVote) {
+          maxVoteThisDay.push(player);
+        }
+      }
+
+      maxVotePlayers = maxVotePlayers.filter((player) => maxVoteThisDay.includes(player));
+      d--;
+
+      output("test", maxVotePlayers);
+    }
+
+    const execution = maxVotePlayers[0];
+
+    if (execution !== "no-execution") {
+      g[execution].alive = false;
+    }
+
+    output("public", `${execution} was executed`);
+
+    for (const player in votes) {
+      output("public", `${player} was voted for by ${votes[player].join(", ")}`);
+    }
+
+    for (const player of alive) {
+      const p = g[player];
+      p.vote = player;
+    }
+  }
+
+  alive = Object.keys(g).filter((player) => g[player].alive);
+
+  // Perform the upkeep for all living players.
+  for (const player of alive) {
+    const p = g[player];
+
+    if (p.team === "sk" && p.cooldown > 0) {
+      p.cooldown--;
+    }
+
+    if (p.role === "investigator") {
+      p.investigations = 2;
+    } else if (p.role === "vigilante") {
+      p.investigations = getAliveBuddy(game, player) !== player ? 1 : 0;
+    } else if (p.role === "prophet") {
+      p.prophecies.push(p.prophecies[p.prophecies.length - 1]);
+      output(player, `${player} predicts on day ${game.day + 1} that ${p.prophecies[game.day]}`);
+    } else if (p.role === "roleblocker") {
+      if (p.tomorrow) {
+        g[p.tomorrow].roleblocked = true;
+        output(player, `${player} roleblocked ${p.tomorrow} for day ${game.day + 1}`);
+        p.all_rollblocks.push(p.tomorrow);
+      }
+
+      p.tomorrow = "";
+    } else if (p.role === "priest") {
+      p.today = { sinners: p.tomorrow.sinners.slice(), saints: p.tomorrow.saints.slice() };
+
+      if (p.today.saints.length > 0 && p.active) {
+        output(
+          player,
+          `${player} priest lists for day ${game.day + 1} are sinners: ${p.today.sinners}, saints: ${p.today.saints}`
+        );
+      }
+    } else if (p.role === "vigilante") {
+      // Do nothing
+    } else if (p.role === "gay knight") {
+      if (p.dying) {
+        p.alive = false;
+        output("public", `${player} died of heartbreak`);
+      }
+
+      if (!g[p.partner].alive) {
+        p.dying = true;
+      }
+    } else if (p.role === "seer") {
+      p.uses = 1;
+    }
+  }
+
+  game.day++;
+  output("public", `day ${game.day} begins!`);
+
+  return r.concat("rollover");
+}
+
+// Helper function to shuffle an array.
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+
   </script>
   <div style="width: 100%; overflow: hidden;">
     <div style="width 550px; float: left;">

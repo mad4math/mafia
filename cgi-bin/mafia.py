@@ -669,6 +669,8 @@ def command_to_json(command):
         return {"action":l[0]}
     elif l[0] == "edit":
         return {"action":l[0], "path":l[1:-1], "code":l[-1]}
+    elif l[0] == "intro":
+        return {"action":"intro", "link":l[1]}
     else:
         player = l[0]
         if l[1] == "investigate":
@@ -731,6 +733,8 @@ def json_to_command(json_obj):
         return 'rollover'
     elif action == 'edit':
         return 'edit ' + ' '.join(json_obj['path']) + ' ' + json_obj['code']
+    elif action == 'intro':
+        return 'intro ' + json_obj['link']
     else:
         player = json_obj['player']
         if action == 'investigate':
@@ -804,6 +808,8 @@ def do_command(game, command):
         random.seed(command["seed"])
     elif action == "rollover":
         rollover(game)
+    elif action == "intro":
+        game["intro"] = command["link"]
     elif action == "edit":
         g = game
         for i in range(len(command["path"])-1):

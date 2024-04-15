@@ -2,13 +2,14 @@ import mafia
 
 option = lambda x:"<option value=\"{}\">{}</option>".format(x,x)
 player_list = lambda game:sorted(game["players"])
+game_intro = lambda game: game["intro"] if "intro" in game else "https://mafia.csail.mit.edu/24-01-town-square/m/5nfhnXrLAHyXcZzkg"
 
 def role(game, player):
     p = game["players"][player]
     pl = player_list(game)
     role_actions = "You are a <b>{}</b><br>".format(p["role"])
     if not p["intro"]:
-        return "Please post your intro on <a href=https://mafia.csail.mit.edu/23-03-town-square/m/tuEyP85mgdX4XPkKT>this thread</a>"
+        return "Please post your intro on <a href={}>this thread</a>".format(game_intro(game))
     if p["roleblocked"] and p["role"]!="gay knight":
         return role_actions + "<br> You are roleblocked today!"
     if not p["alive"]:
