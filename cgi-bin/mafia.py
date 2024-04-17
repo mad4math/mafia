@@ -506,7 +506,7 @@ def do_investigation(game, player, x, y, z, w):
     buddy = get_alive_buddy(game,player)
     
     if trapped(game,player) and not USE_BUDDY:
-        w = random.choice([x,y])
+        w = random.choice([x,y]) if w==None else w
         output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
         return (x,y,z,w)
     
