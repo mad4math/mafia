@@ -69,6 +69,11 @@ function sendSeer() {
   params = gg()+"&action=seer&target="+getInput("target");
   xhttp.send(params);
 }
+function sendFrame() {
+  var xhttp = setupRequest();
+  params = gg()+"&action=frame&target="+getInput("framed")+"&kill="+getInput("frame-victim");
+  xhttp.send(params);
+}
 function sendTrap() {
   var xhttp = setupRequest();
   params = gg()+"&action=trap&target="+getInput("trap-target")+"&guess="+getInput("trap-guess");

@@ -33,6 +33,9 @@ def update_player(d):
             command["target"]=d["target"][0]
         if action=="seer":
             command["target"]=d["target"][0]
+        if action=="frame":
+            command["target"]=d["target"][0]
+            command["kill"]=d["kill"][0]
         if action=="trap":
             command["target"]=d["target"][0]
             command["guess"]=d["guess"][0]

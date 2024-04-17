@@ -404,6 +404,7 @@ def frame(game, player, kill, target):
     if game["players"][player]["frames"] < 1:
         raise IllegalAction("You already used you frame!")
     game["deaths"][kill]["framed"]+=[target]
+    game["players"][player]["frames"] -= 1
     output(player, "{} framed {} for the death of {}".format(player, target, kill))
 
 def submit_prophecy(game, player, prophecy):

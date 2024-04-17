@@ -30,6 +30,7 @@ def role(game, player):
             <br>
             Frames left: {}<br>
             Frame <select id="framed">{}</select> for <select id="frame-victim">{}</select>
+            <button onClick=sendFrame()>Frame</button>
             <br>
             """.format(p["frames"],all_players_options, deaths_options)
         role_actions += """
