@@ -143,8 +143,7 @@ def rollover(game):
     #determine who is executed, and publish the results
     if game["day"] > 0:
         d = game["day"]
-        players_random = [player for player in g if g[player]["alive"]]
-        random.shuffle(players_random)
+        players_random = [player for player in game["tiebreak"] if g[player]["alive"]]
         max_vote_players = players_random + ["no-execution"]
         while d > 0 and len(max_vote_players) > 1:
             max_vote_this_day = max_vote_players
@@ -280,7 +279,8 @@ def kill(game, killer, victim, time, location):
     for player in game["players"]:
         p = game["players"][player]
         if trapped(game, player) and p["role"] == "prophet":
-            grant_prophet_investigations(game, player, victim, False, False, False)
+            pass
+            #grant_prophet_investigations(game, player, victim, False, False, False)
         if p["role"] == "priest" and p["active"] and p["alive"]:
             buddy = get_alive_buddy(game, player)
             b = game["players"][buddy]
@@ -804,6 +804,13 @@ def do_command(game, command):
         with open(get_game_file_location(command["name"])+"init.txt") as file:
             game = json.loads(file.readlines()[0])
             setup(game)
+        if not "tiebreak" in game:
+            game["tiebreak"] = []
+            for player in game["players"]:
+                game["tiebreak"] += [player]
+            random.shuffle(game["tiebreak"])
+            with open(get_game_file_location(command["name"])+"init.txt","w") as file:
+                file.write(json.dumps(game))
     elif action == "seed":
         random.seed(command["seed"])
     elif action == "rollover":
