@@ -3,7 +3,18 @@ import mafia
 import create_page
 import datetime
 
+"""the request has the following structure:
+{ id : id,
+command : command }
+"""
+
+
+
 def update_player(d):
+        game_id = d["id"]
+        command = d["command"]
+        player = d["command"]["player"]
+        """
         game_id = d["id"][0]
         player = d["player"][0]
         action = d["action"][0]
@@ -41,5 +52,6 @@ def update_player(d):
             command["guess"]=d["guess"][0]
         if action=="untrap":
             command["target"]=d["target"][0]
+            """
         (game, valid, messages) = mafia.run_commands_and_save(game_id,[command])
         return create_page.player_info(game,player,messages)

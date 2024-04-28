@@ -38,9 +38,9 @@
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = receiveGameState;
     xhttp.open("POST", "save-admin", true);
-    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    params = "id="+get_game_id()+"&count="+count+"&commands="+document.getElementById("command_box").value;
-    xhttp.send(params);
+    xhttp.setRequestHeader("Content-type", "application/json");
+    //params = "id="+get_game_id()+"&count="+count+"&commands="+document.getElementById("command_box").value;
+    xhttp.send(JSON.stringify({"id":get_game_id(), "count":count, "commands":document.getElementById("command_box").value }));
     };
     function addIntros() {
         s = "";

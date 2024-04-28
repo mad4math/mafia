@@ -11,6 +11,7 @@ import save_admin
 import sys
 import mafia
 import os
+import json
 
 
 
@@ -58,7 +59,8 @@ class MyServer(SimpleHTTPRequestHandler):
     def do_POST(self):
         url = urllib.parse.urlparse(self.path)
         path = url.path[1:]
-        d = urllib.parse.parse_qs(str(self.rfile.read(int(self.headers["Content-Length"])), "utf-8"))
+        
+        d = json.loads(str(self.rfile.read(int(self.headers["Content-Length"])), "utf-8"))
         if path == "update-player":
             response = update_player.update_player(d)
             self.send_response(200)

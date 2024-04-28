@@ -131,12 +131,39 @@ def faction(game, player):
     role_options = "\n".join(option(x) for x in mafia.roles)
     all_players_options = "\n".join(option(x) for x in player_list(game))
     def trap_interface(count, trapped):
-        return """
+        aa = """
             Use a trap: Trap <select id="trap-target">{}</select> as <select id="trap-guess">{}</select> 
             <button onclick="sendTrap()">Trap!</button> Traps left: <b>{}</b><br>
             Untrap a player: <select id="untrap-target">{}</select><button onclick="sendUntrap()">Untrap</button>
+            <br>
             """.format(alive_options, role_options, count, "\n".join(option(x) for x in trapped))
+        aa += "<br>".join(trapped_player_settings(player, trapped[player]) for player in trapped)
+    def trapped_player_settings(player, trapped_settings):
+        role = game["players"][player]["role"]
+        aa = """
+        <br>
+        <div id="trapped-{player}">
+        Trap settings for <b>{player}</b>({role}):<br>
 
+        """.format(player=player, role=role)
+        if role == "investigator":
+            aa += """
+            Now that this player is trapped, you can control the results they recieve on investigations. Using the dropdowns below,
+            you can select what results they should recieve for specific investigations. Anything you don't specify will resolve as
+            if they were not trapped.<br>
+            <select class="trap-investigation-x">{x}</select> and <select class="trap-investigation-y">{y}</select> for kill <select class="trap-investigation-z">{z}</select>
+            should return <select class="trap-investigation-w">{w}</select><button onclick="sendTrappedPlayerSettings('{player}')">Submit</button>
+            <br>
+            """.format(x = "\n".join(option(x) for x in player_list(game)+["$EVERYONE"]),
+            y = "\n".join(option(x) for x in player_list(game)+["$EVERYONE"]),
+            z = "\n".join(option(x) for x in game["deaths"]+["$EVERYONE"]),
+            w = option("Default"),
+            player = player)
+            aa += """Current manipulations:<br>
+            """ + "<br>".join("""{{{x}, {y} for kill {z} returns {w}}}""".format(x = k["x"], y = k["y"], z = k["z"], w = k["w"]) for k in trapped_settings["manipulations"])
+            aa += "<br><br>"
+        aa += "</div>"
+        return aa
     if game["players"][player]["team"]=="mafia":
         a = """
         You are the mafia! The mafia team is <b>{}</b><br>""".format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"))

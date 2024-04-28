@@ -335,7 +335,7 @@ def trap_role(game, player, target, guess):
     if target in game["mafia"]["untrappable"]:
         raise IllegalAction("Mafia can't trap someone they've Seen!")
     if game["players"][target]["role"] == guess:
-        trap_source["trapped"] += [target]
+        trap_source["trapped"][target] = {"manipulations":[]}
         output(trap_source_name, "You successfully trapped {} as {}. Their role now will silently fail.".format(target, guess))
     else:
         trap_source["traps"] -= 1
@@ -353,7 +353,8 @@ def untrap(game, player, target):
         trap_source_name = player
     if not target in trap_source["trapped"]:
         raise IllegalAction("You didn't trap that person in the first place!")
-    trap_source["trapped"] = [p for p in trap_source["trapped"] if p!=target]
+    #trap_source["trapped"] = [p for p in trap_source["trapped"] if p!=target]
+    del trap_source["trapped"][target]
     output(trap_source_name, "You released {} from their trap".format(target))
 
 
@@ -539,6 +540,21 @@ def do_investigation(game, player, x, y, z, w):
         game["deaths"][z]["investigations"] += [[x,y,w]]
     return (x, y, z, w)
 
+def set_trap_investigation(game, player, target, x, y, z, w):
+    if game["players"][player]["team"] == "town":
+        raise IllegalAction("Only mafia can set traps!")
+    if game["players"][player]["team"] == "mafia":
+        trap_source = game["mafia"]
+        trap_source_name = "mafia"
+    else:
+        trap_source = game["players"][player]
+        trap_source_name = player
+    if not target in trap_source["trapped"]:
+        raise IllegalAction("Can't maniuplate a player you haven't trapped yet!")
+     m = trap_source["trapped"][target]["manipulations"]
+     trap_source["trapped"][target]["manipulations"] = [mm for mm in m if not (((mm["x"]==x and mm["y"]==y) or (mm["x"]==y and mm["y"]==x)) and mm["z"]==z)] +
+     [{"x":x, "y":y, "z":z, "w":w}]
+
 messages = []
 def output(audience, message):
     m = "{}: {}".format(audience, message)
@@ -715,6 +731,8 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0],"target":l[2], "guess":l[4]}
         elif l[1] == "untrap":
             return {"action":l[1],"player":l[0],"target":l[2]}
+        elif l[1] == "trap-manipulate-investigator":
+            return {"action":l[1],"player":l[0],"target":l[2],"suspect1":l[3],"suspect2":l[4],"kill":l[6],"result":l[8]}
         elif l[1] == "intro":
             return {"action":l[1],"player":l[0]}
         elif l[1] == "drop":
@@ -785,6 +803,8 @@ def json_to_command(json_obj):
             return player + ' trap ' + json_obj['target'] + ' guess "' + (json_obj['guess'] if json_obj['guess'] else "") + '"'
         elif action == 'untrap':
             return player + ' untrap ' + json_obj['target']
+        elif action == 'trap-manipulate-investigator':
+            return player + ' trap-manipulate-investigator ' + json_obj['target'] + ' ' + json_obj['suspect1'] + json_obj['suspect2'] + ' kill ' + json_obj['kill'] + ' result ' + json_obj['result']
         elif action == 'intro':
             return player + ' intro'
         elif action == 'drop':
@@ -895,6 +915,13 @@ def do_command(game, command):
         elif action == "untrap":
             check_valid_player(game, command["target"])
             untrap(game, player, command["target"])
+        elif action == "trap-manipulate-investigator":
+            target = command["target"]
+            x = command["suspect1"]
+            y = command["suspect2"]
+            z = command["kill"]
+            w = command["result"]
+            set_trap_investigation(game, player, target, x, y, z, w)
         elif action == "intro":
             game["players"][player]["intro"]=1
         elif action == "drop":
