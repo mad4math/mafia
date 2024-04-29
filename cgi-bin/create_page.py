@@ -24,7 +24,7 @@ def role(game, player):
         mf = ""
         if p["team"] == "mafia" or p["team"] == "sk":
             m = """
-            with result <select id="w">{}</select>
+            with result <select id="w" class="investigationResultSubmission">{}</select>
             """.format(option("")+all_players_options)
             mf = """
             <br>
@@ -51,7 +51,7 @@ def role(game, player):
         m = ""
         if p["team"] == "mafia" or p["team"] == "sk":
             m = """
-            with result <select id="w">{}</select>
+            with result <select id="w" class="investigationResultSubmission">{}</select>
             """.format(option("")+all_players_options)
         role_actions += """
                 Submit a prophecy:<br>(Note: investigations from prophecies will be granted manually by GMs because locations can be ambiguous sometimes)<br>
@@ -138,6 +138,7 @@ def faction(game, player):
             <br>
             """.format(alive_options, role_options, count, "\n".join(option(x) for x in trapped))
         aa += "<br>".join(trapped_player_settings(player, trapped[player]) for player in trapped)
+        return aa
     def trapped_player_settings(player, trapped_settings):
         role = game["players"][player]["role"]
         aa = """
@@ -146,21 +147,73 @@ def faction(game, player):
         Trap settings for <b>{player}</b>({role}):<br>
 
         """.format(player=player, role=role)
-        if role == "investigator":
+        if role == "investigator" or role == "prophet":
             aa += """
-            Now that this player is trapped, you can control the results they recieve on investigations. Using the dropdowns below,
+            Now that {player} is trapped, you can control the results they recieve on investigations. Using the dropdowns below,
             you can select what results they should recieve for specific investigations. Anything you don't specify will resolve as
             if they were not trapped.<br>
-            <select class="trap-investigation-x">{x}</select> and <select class="trap-investigation-y">{y}</select> for kill <select class="trap-investigation-z">{z}</select>
-            should return <select class="trap-investigation-w">{w}</select><button onclick="sendTrappedPlayerSettings('{player}')">Submit</button>
+            <select class="trapInvestigationX">{x}</select> and <select class="trapInvestigationY">{y}</select> for kill <select class="trapInvestigationZ">{z}</select>
+            should return <select class="investigationResultSubmission">{w}</select><button onclick="sendTrappedInfo('{player}','investigator')">Submit</button>
             <br>
             """.format(x = "\n".join(option(x) for x in player_list(game)+["$EVERYONE"]),
             y = "\n".join(option(x) for x in player_list(game)+["$EVERYONE"]),
-            z = "\n".join(option(x) for x in game["deaths"]+["$EVERYONE"]),
-            w = option("Default"),
+            z = "\n".join(option(x) for x in list(game["deaths"].keys())+["$EVERYONE"]),
+            w = "",
             player = player)
             aa += """Current manipulations:<br>
-            """ + "<br>".join("""{{{x}, {y} for kill {z} returns {w}}}""".format(x = k["x"], y = k["y"], z = k["z"], w = k["w"]) for k in trapped_settings["manipulations"])
+            """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>{{<b>{x}, {y}</b>}} for kill <b>{z}</b> returns <b>{w}</b>
+                """.format(x = trapped_settings["manipulations"][i]["suspect1"], y = trapped_settings["manipulations"][i]["suspect2"], z = trapped_settings["manipulations"][i]["kill"],
+                 w = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
+            aa += "<br><br>"
+        elif role == "seer":
+            aa += """
+            Now that {player} is trapped, you can control the results they see. Using the dropdowns below, you can select what results they will see
+            for specific players. Anything you don't specify will resolve as
+            if they were not trapped.<br>
+            See player <select class="seerTrapX">{x}</select> as <select class="seerTrapResult">{y}</select><button onclick="sendTrappedInfo('{player}')">Submit</button>
+            """.format(x = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"]), y = "\n".join(option(x) for x in mafia.roles))
+            aa += """Current manipulations:<br>
+            """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as <b>{y}</b>
+                """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
+            aa += "<br><br>"
+        elif role == "gravedigger":
+            aa += """
+            Now that {player} is trapped, you can control the results they see. Using the dropdowns below, you can select what results they will see
+            for specific players. Anything you don't specify will resolve as
+            if they were not trapped.<br>
+            See player <select class="gravediggerTrapX">{x}</select> as role <select class="gravediggerTrapRoleResult">{y}</select> and alignment
+            <select class="gravediggerTrapAlignmentResult">{z}</select> 
+            <button onclick="sendTrappedInfo('{player}')">Submit</button>
+            """.format(x = "\n".join(option(x) for x in player_list(game)), y = "\n".join(option(x) for x in mafia.roles), 
+                z = "\n".join(option(x) for x in ["town","mafia","sk"]), player = player) 
+            aa += """Current manipulations:<br>
+            """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as <b>{y} and {z}</b>
+                """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["roleResult"],
+                 z = trapped_settings["manipulations"][i]["alignmentResult"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
+            aa += "<br><br>"
+        elif role == "censusmaster":
+            aa += """
+            Now that {player} is trapped, you can control the results they see. Anything you don't specify will resolve as
+            if they were not trapped.<br>
+            See role/alignment <select class="censusTrapX">{x}</select> as count <select class="censusTrapResult>{y}</select>
+            <button onclick="sendTrappedInfo('{player}')">Submit</button>
+            """.format(x = "\n".join(option(x) for x in mafia.roles + ["mafia"]), y = "\n".join(option(x) for x in range(10)), player = player) 
+            aa += """Current manipulations:<br>
+            """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as having a count of <b>{y}</b>
+                """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
+            aa += "<br><br>"
+        elif role == "fortune teller":
+            aa += """
+            Now that {player} is trapped, you can control the results they see. Anything you don't specify will resolve as
+            if they were not trapped.<br>
+            <select class="fortuneTellerTrapX">{x}</select> has a <select class="fortuneTellerTrapResult>{z}</select> omen for the death of 
+            <select class="fortuneTellerTrapY">{y}</select><button onclick="sendTrappedInfo('{player}')">Submit</button>
+            """.format(x = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"]), y = "\n".join(option(x) for x in game["deaths"]),
+            z = "\n".join(option(x) for x in ["good","bad"]), player = player) 
+            aa += """Current manipulations:<br>
+            """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as having a <b>{z}</b> omen for the death of <b>{y}</b>
+                """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["kill"],
+                 z = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
             aa += "<br><br>"
         aa += "</div>"
         return aa

@@ -10,7 +10,7 @@ def load_admin(d):
     except FileNotFoundError:
         mafia.save_game(game_id, [{"time":str(datetime.datetime.now()), "command":{"action":"setup", "name":game_id}}])
     (game, valid, messages) = mafia.load_game(game_id)
-    return (mafia.json_to_commands(valid)+"$"+"<br>\n".join(x for x in messages)+"$" + str(len(valid)) + "$"
-         + "$" + json.dumps(game))
+    return (mafia.json_to_commands(valid)+"`"+"<br>\n".join(x for x in messages)+"`" + str(len(valid)) + "`"
+         + "`" + json.dumps(game))
 
 #print(mafia.json_to_commands(mafia.get_game(game_id))+"$"+"<br>\n".join(x for x in messages)+"<br>"+json.dumps(game) + "$" + str(len(mafia.get_game(game_id))) + "$" + str(",".join(p for p in game["players"])) + "$")

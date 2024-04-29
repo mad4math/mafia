@@ -11,11 +11,11 @@
     function receiveGameState() {
         if (this.readyState == 4 && this.status == 200) {
            //console.log(this.responseText);
-           document.getElementById("command_box").value = this.responseText.split("$")[0];
-           document.getElementById("display").innerHTML = this.responseText.split("$")[1] + "<br>" + this.responseText.split("$")[4];
-           count = this.responseText.split("$")[2];
-           document.getElementById("common_actions").innerHTML = this.responseText.split("$")[3];
-           gameState = JSON.parse(this.responseText.split("$")[4]);
+           document.getElementById("command_box").value = this.responseText.split("`")[0];
+           document.getElementById("display").innerHTML = this.responseText.split("`")[1] + "<br>" + this.responseText.split("`")[4];
+           count = this.responseText.split("`")[2];
+           document.getElementById("common_actions").innerHTML = this.responseText.split("`")[3];
+           gameState = JSON.parse(this.responseText.split("`")[4]);
            updateDayEndMessage();
            updateProphetResponses();
            createKillInputs();

@@ -4,6 +4,7 @@ var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
              document.getElementById("player-info").innerHTML = xhttp.responseText;
+             setupListeners();
       }
   };
   xhttp.open("POST", "update-player", true);
@@ -120,15 +121,124 @@ function sendActionWithTarget(action) {
   c.command.target = getInput("target");
   xhttp.send(JSON.stringify(c));
 }
-function sendTrappedPlayerSettings(player) {
+function sendTrappedInvestigation(player) {
   var xhttp = setupRequest();
   var c = gg();
   var trapped_player = document.getElementById("trapped-"+player);
   c.command.action = "trap-manipulate-investigator";
   c.command.target = player;
-  c.command.suspect1 = trapped_player.getElementsByClassName("trap-investigation-x")[0].value;
-  c.command.suspect2 = trapped_player.getElementsByClassName("trap-investigation-y")[0].value;
-  c.command.kill = trapped_player.getElementsByClassName("trap-investigation-z")[0].value;
-  c.command.result = trapped_player.getElementsByClassName("trap-investigation-w")[0].value;
+  c.command.suspect1 = trapped_player.getElementsByClassName("trapInvestigationX")[0].value;
+  c.command.suspect2 = trapped_player.getElementsByClassName("trapInvestigationY")[0].value;
+  c.command.kill = trapped_player.getElementsByClassName("trapInvestigationZ")[0].value;
+  c.command.result = trapped_player.getElementsByClassName("investigationResultSubmission")[0].value;
   xhttp.send(JSON.stringify(c));
 }
+
+trappedRoleKeys = {
+  "investigator": {
+    "trapInvestigationX" : "suspect1",
+    "trapInvestigationY" : "suspect2",
+    "trapInvestigationZ" : "kill",
+    "investigationResultSubmission" : "result"
+  },
+  "seer" : {
+    "seerTrapX" : "x",
+    "seerTrapResult" : "result"
+  },
+  "gravedigger" : {
+    "gravediggerTrapX" : "x",
+    "gravediggerTrapRoleResult" : "roleResult",
+    "gravediggerTrapAlignmentResult" : "alignmentResult"
+  },
+  "censusmaster" : {
+    "censusTrapX" : "x",
+    "censusTrapResult" : "result"
+  },
+  "fortune teller" : {
+    "fortuneTellerTrapX" : "x",
+    "fortuneTellerTrapY" : "y",
+    "fortuneTellerTrapResult" : "result"
+  }
+}
+
+function sendTrappedInfo(player, role) {
+  var xhttp = setupRequest();
+  var c = gg();
+  var trapped_player = document.getElementById("trapped-"+player);
+  c.command.action = "trap-manipulate";
+  c.command.target = player;
+  info = trappedRoleKeys[role];
+  c.command.info = {};
+  for(x in info) {
+    c.command.info[info[x]] = trapped_player.getElementsByClassName(x)[0].value;
+  }
+  xhttp.send(JSON.stringify(c));
+}
+
+function removeTrappedInfo(player, index) {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "trap-manipulate-remove-index";
+  c.command.target = player;
+  c.command.index = index;
+  xhttp.send(JSON.stringify(c));
+}
+
+function removeTrappedInvestigation(player, x, y, z) {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "trap-manipulate-investigator";
+  c.command.target = player;
+  c.command.suspect1 = x;
+  c.command.suspect2 = y;
+  c.command.kill = z;
+  c.command.result = "$Default";
+  xhttp.send(JSON.stringify(c));
+}
+function sendTrappedSeer(player) {
+  var xhttp = setupRequest();
+  var c = gg();
+  var trapped_player = document.getElementById("trapped-"+player);
+  c.command.action = "trap-manipulate-seer";
+  c.command.target = player;
+  c.command.x = trapped_player.getElementsByClassName("seerTrapX")[0].value;
+  c.command.result = trapped_player.getElementsByClassName("seerTrapResult")[0].value;
+  xhttp.send(JSON.stringify(c));
+}
+function removeTrappedSeer(player, x) {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "trap-manipulate-seer";
+  c.command.target = player;
+  c.command.x = x;
+  xhttp.send(JSON.stringify(c));
+
+}
+
+
+
+function setPossibleInvestigationResults(e) {
+
+  console.log(e.target.parentElement);
+  console.log(e.target.parentElement.getElementsByClassName("investigationResultSubmission")[0]);
+  var x = e.target.parentElement.getElementsByClassName("trapInvestigationX")[0].value;
+  var y = e.target.parentElement.getElementsByClassName("trapInvestigationY")[0].value;
+  var s = "<option value=\""+x+"\">"+x+"</option>" + "<option value=\""+y+"\">"+y+"</option>";// + "<option value=\"$Default\">Default</option>";
+  e.target.parentElement.getElementsByClassName("investigationResultSubmission")[0].innerHTML = s;
+
+}
+
+
+
+function setupListeners() {
+  for(var e of document.getElementsByClassName("trapInvestigationX")) {
+    console.log(e);
+    e.addEventListener('change', setPossibleInvestigationResults);
+  }
+  for(var e of document.getElementsByClassName("trapInvestigationY")) {
+    e.addEventListener('change', setPossibleInvestigationResults);
+  }
+}
+window.addEventListener("load", function(){
+    setupListeners();
+});
