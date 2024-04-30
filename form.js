@@ -121,6 +121,47 @@ function sendActionWithTarget(action) {
   c.command.target = getInput("target");
   xhttp.send(JSON.stringify(c));
 }
+
+function sendGravedigRole() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "gravedig";
+  c.command.target = getInput("roleTarget");
+  c.command.type = "role";
+  xhttp.send(JSON.stringify(c));
+}
+function sendGravedigAlignment() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "gravedig";
+  c.command.target = getInput("alignmentTarget");
+  c.command.type = "alignment";
+  xhttp.send(JSON.stringify(c));
+}
+function sendCensus() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "census";
+  c.command.target = getInput("roleTarget");
+  xhttp.send(JSON.stringify(c));
+}
+function sendCensusMafia() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "census";
+  c.command.target = "mafia";
+  xhttp.send(JSON.stringify(c));
+}
+function sendFortune() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "fortune_tell";
+  c.command.target = getInput("fortuneTarget");
+  c.command.kill = getInput("fortuneKill");
+  xhttp.send(JSON.stringify(c));
+}
+
+
 function sendTrappedInvestigation(player) {
   var xhttp = setupRequest();
   var c = gg();
@@ -142,11 +183,11 @@ trappedRoleKeys = {
     "investigationResultSubmission" : "result"
   },
   "seer" : {
-    "seerTrapX" : "x",
+    "seerTrapX" : "target",
     "seerTrapResult" : "result"
   },
   "gravedigger" : {
-    "gravediggerTrapX" : "x",
+    "gravediggerTrapX" : "target",
     "gravediggerTrapRoleResult" : "roleResult",
     "gravediggerTrapAlignmentResult" : "alignmentResult"
   },
@@ -228,7 +269,11 @@ function setPossibleInvestigationResults(e) {
 
 }
 
+roleActionKeys = {
+  "gravedigger": {
 
+  }
+}
 
 function setupListeners() {
   for(var e of document.getElementsByClassName("trapInvestigationX")) {

@@ -6,8 +6,11 @@ import os
 import time
 
 USE_BUDDY = False
+MANIP_WILDCARD = "$EVERYONE"
 
-roles = ["investigator","prophet","priest","vigilante","seer","gay knight"] #all the roles
+#no gay knight
+roles = ["investigator","prophet","priest","vigilante","seer", "gravedigger", "censusmaster", "fortune teller"] #all the roles
+common_roles = ["investigator","prophet","priest","vigilante","seer", "fortune teller"]
 straight_roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles that aren't gay
 
 def load_gamestate(game_file):
@@ -54,6 +57,16 @@ def setup(game):
         elif p["role"] == "investigator":
             p["frames"] = 1
             p["investigations"] = 0
+        elif p["role"] == "gravedigger":
+            p["roleChecks"] = 0
+            p["alignmentChecks"] = 1
+            p["plants"] = 1
+        elif p["role"] == "censusmaster":
+            p["roleCounts"] = 0
+            p["mafiaCounts"] = 1
+        elif p["role"] == "fortune teller":
+            p["uses"] = 0
+            p["killsChecked"] = []
         elif p["role"] == "vigilante" and get_alive_buddy(game, player) != player:
             p["investigations"] = 1
     output("mafia","{} are the mafia ".format(",".join(x for x in game["players"] if game["players"][x]["team"]=="mafia")))
@@ -81,11 +94,11 @@ def generate_players(players,mafia,sk=0):
             result[p]["buddy"]=""
             if m>0:
                 result[p]["team"]="mafia"
-                role = random.choice(roles+straight_roles)
+                role = random.choice(roles+common_roles)
                 m -= 1
             elif sk>0:
                 result[p]["team"]="sk"
-                role = random.choice(roles+straight_roles)
+                role = random.choice(roles+common_roles)
                 sk -= 1
             else:
                 result[p]["team"]="town"
@@ -100,9 +113,9 @@ def generate_players(players,mafia,sk=0):
                         last_gay = None
                     else:
                         last_gay = p
-                        role = random.choice(roles)
+                        role = random.choice(roles+common_roles)
                 else:
-                    role = random.choice(roles)
+                    role = random.choice(roles+common_roles)
             if role == "gay knight":
                 if last_gay==None:
                     last_gay = p
@@ -198,6 +211,12 @@ def rollover(game):
                 p["cooldown"] -= 1
         if p["role"] == "investigator":
             p["investigations"] = 2
+        elif p["role"] == "gravedigger":
+            p["roleChecks"] = 1
+        elif p["role"] == "censusmaster":
+            p["roleCounts"] = 1
+        elif p["role"] == "fortune teller":
+            p["uses"] = 1
         elif p["role"] == "vigilante":
             if get_alive_buddy(game, player)!=player:
                 p["investigations"] = 1
@@ -253,6 +272,14 @@ def get_alive_buddy(game, player):
         return game["players"][player]["buddy"]
     else:
         return player
+def trapped_manipulations(game, player):
+    for x in game["players"]:
+        if game["players"][x]["team"]=="sk" and player in game["players"][x]["trapped"]:
+            return game["players"][x]["trapped"][player]
+    if player in game["mafia"]["trapped"]:
+        return game["mafia"]["trapped"][player]
+    return None
+
 def trapped(game, player):
     return any(player in game["players"][x]["trapped"] for x in game["players"] if game["players"][x]["team"]=="sk") or player in game["mafia"]["trapped"]
 
@@ -271,7 +298,7 @@ def promote_to_mafia(game, player):
 def kill(game, killer, victim, time, location):
     if game["players"][killer]["roleblocked"]:
         raise IllegalAction()
-    game["deaths"][victim] = {"killer":killer,"location":location,"time":time,"investigations":[],"framed":[],"true_killer":killer, "day":game["day"]}
+    game["deaths"][victim] = {"killer":killer,"location":location,"time":time,"investigations":[],"framed":[],"true_killer":killer, "day":game["day"], "omen":[]}
     game["players"][victim]["alive"] = False
     if game["players"][killer]["team"] == "sk":
         game["players"][killer]["cooldown"] = 3
@@ -443,15 +470,21 @@ def see(game, player, target, result=None):
             game["mafia"]["untrappable"] += [target]
         if game["players"][player]["team"] == "sk":
             game["mafia"]["untrappable"] += [target]
-        possible_results = roles if trapped(game, player) else [game["players"][target]["role"]]
-        #possible_results = [game["players"][target]["role"]]
+        possible_results = [game["players"][target]["role"]]
+        if trapped(game, player):
+            mm = trapped_manipulations(game,player)["manipulations"]
+            for x in mm:
+                if x["target"] == target:
+                    possible_results = [x["result"]]
+                    break
+        print(possible_results)
+        #possible_results = roles if trapped(game, player) else [game["players"][target]["role"]]
         if result==None:
             result = random.choice(possible_results)
-        if result not in possible_results:
-            raise IllegalAction("{} is not a possible result for {} to see as the role of {}".format(result, player, target))
-        else:
-            output(buddy, "{} is a {}".format(target, result))
-            return result
+        #if result not in possible_results:
+        #    raise IllegalAction("{} is not a possible result for {} to see as the role of {}".format(result, player, target))
+        output(buddy, "{} is a {}".format(target, result))
+        return result
 
 def infallible_investigate(game, player, guess):
     kill = game["players"][player]["partner"]
@@ -507,21 +540,32 @@ def do_investigation(game, player, x, y, z, w):
     buddy = get_alive_buddy(game,player)
     
     if trapped(game,player) and not USE_BUDDY:
-        w = random.choice([x,y]) if w==None else w
-        output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
-        return (x,y,z,w)
-    
+        if w==None:
+            mm = trapped_manipulations(game,player)["manipulations"]
+            print(mm)
+            for m in reversed(mm):
+                if m["kill"] == z or m["kill"] == MANIP_WILDCARD:
+                    x1 = m["suspect1"]
+                    y1 = m["suspect2"]
+                    if ((x1 == x or x1 == MANIP_WILDCARD) and (y1 == y or y1 == MANIP_WILDCARD)) or ((x1 == y or x1 == MANIP_WILDCARD) and (y1 == x or y1 == MANIP_WILDCARD)):
+                        if x == m["result"] or (m["result"] == MANIP_WILDCARD and x not in [x1,y1]):
+                            w = x
+                        else:
+                            w = y
+                        break
+
+        #w = random.choice([x,y]) if w==None else w
+        if w != None:
+            output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
+            return (x,y,z,w)
+
+    guiltiness = lambda x: 1 if (game["deaths"][z]["killer"] == x or x in game["deaths"][z]["framed"]) else 0
+    xGuilt = guiltiness(x)
+    yGuilt = guiltiness(y)
     legal = []
-    if game["deaths"][z]["killer"] == x:
+    if xGuilt > yGuilt:
         legal = [y]
-    elif game["deaths"][z]["killer"] == y:
-        legal = [x]
-    elif x in game["deaths"][z]["framed"]:
-        if y in game["deaths"][z]["framed"]:
-            legal = [x,y]
-        else:
-            legal = [y]
-    elif y in game["deaths"][z]["framed"]:
+    elif yGuilt > xGuilt:
         legal = [x]
     else:
         legal = [x,y]
@@ -533,6 +577,7 @@ def do_investigation(game, player, x, y, z, w):
         raise IllegalAction("That's not a possible result! {} isn't one of the suspects!".format(w))
     if w and w not in legal:
         output(buddy, "Investigation of {},{} for {} can't produce the result {}".format(x,y,z,w))
+        #submitting an illegal seeding as mafia costs you your investigation, but does not do anything other than tell you it was invalid.
     else:
         if not w:
             w = random.choice(legal)
@@ -567,9 +612,101 @@ def remove_trap_info(game, player, target, i):
         raise IllegalAction("Can't maniuplate a player you haven't trapped yet!")
     del trap_source["trapped"][target]["manipulations"][i]
 
+def set_gravedig(game, player, target, role, alignment):
+    if game["players"][player]["plants"] < 1:
+        raise IllegalAction("Can't plant evidence again!")
+    check_valid_player(game, target)
+    game["players"][target]["setGrave"] = {"role": role, "alignment": alignment}
+    output(player, "planted evidence of role {role} and alignment {alignment} on player {target}".format(role=role, alignment=alignment, target=target))
+
+def gravedig(game, player, target, t):
+    if game["players"][player]["role"] != "gravedigger":
+        raise IllegalAction("Only gravediggers can gravedig!")
+    if game["players"][target]["alive"]:
+        raise IllegalAction("Can't gravedig a living player!")
+    if t not in ["role", "alignment"]:
+        raise IllegalAction("Illegal type of gravedig")
+    if game["players"][player]["roleChecks"] < 1:
+        raise IllegalAction("Can't gravedig again today!")
+    if t == "alignment" and game["players"][player]["alignmentChecks"]<1:
+        raise IllegalAction("Can't check alignment again!")
+    check_valid_player(game, target)
+    game["players"][player]["roleChecks"] -= 1
+    if t == "alignment":
+        game["players"][player]["alignmentChecks"] -= 1
+    result = None
+    if trapped(game, player):
+        mm = trapped_manipulations(game,player)["manipulations"]
+        for x in mm:
+            if x["target"] == target:
+                if t == "role":
+                    result = x["roleResult"]
+                else:
+                    result = x["alignmentResult"]
+    if not result:
+        if "setGrave" in game["players"][target]:
+            result = game["players"][target]["setGrave"][t]
+        else:
+            result = game["players"][target]["role"] if t == "role" else game["players"][target]["team"]
+    output(get_alive_buddy(game, player), "grave dig of {target} reveals they were a {result}".format(target=target, result=result))
+    return result
+
+def census(game, player, target):
+    result = None
+    if game["players"][player]["role"] != "censusmaster":
+        raise IllegalAction("Only censusmasters can count!")
+    if game["players"][player]["roleCounts"] < 1:
+        raise IllegalAction("Can't count again today!")
+    if target == "mafia" and game["players"][player]["mafiaCounts"] < 1:
+        raise IllegalAction("Can't count the mafia again!")
+    game["players"][player]["roleCounts"] -= 1
+    if target == "mafia":
+        game["players"][player]["mafiaCounts"] -= 1
+    if trapped(game, player):
+        mm = trapped_manipulations(game,player)["manipulations"]
+        for x in mm:
+            if x["x"] == target:
+                result = x["result"]
+    if result == None:
+        if target == "mafia":
+            result = sum(1 for x in game["players"] if game["players"][x]["alive"] and game["players"][x]["team"]=="mafia")
+        else:
+            result = sum(1 for x in game["players"] if game["players"][x]["alive"] and game["players"][x]["role"]==target)
+    output(get_alive_buddy(game, player), "There are <b>{x}</b> {target} left in the game".format(target=target, x=result))
+    return result
+
+def fortune_tell(game, player, target, kill):
+    result = None
+    if game["players"][player]["role"] != "fortune teller":
+        raise IllegalAction("Only fortune tellers can tell fortunes!")
+    if game["players"][player]["uses"] < 1:
+        raise IllegalAction("Can't tell any more fortunes today!")
+    if kill not in game["deaths"]:
+        raise IllegalAction("Invalid kill to fortune tell about")
+    game["players"][player]["uses"] -= 1
+    check_valid_player(game, target)
+    if trapped(game, player):
+        mm = trapped_manipulations(game,player)["manipulations"]
+        for x in mm:
+            if x["x"] == target and x["y"] == kill:
+                result = x["result"]
+    if result == None:
+        if game["players"][target]["role"] == "fortune teller":
+            result = "Good"
+        elif target == game["deaths"][kill]["killer"]:
+            result = "Bad"
+        elif target in game["deaths"][kill]["omen"]:
+            result = "Bad"
+        else:
+            result = "Good"
+    output(get_alive_buddy(game, player), "You feel {result} omens about {target} for the death of {kill}".format(target=target, result=result, kill=kill))
 
 
 
+
+
+
+"""
 def set_trap_investigation(game, player, target, x, y, z, w):
     if game["players"][player]["team"] == "town":
         raise IllegalAction("Only mafia can set traps!")
@@ -584,7 +721,7 @@ def set_trap_investigation(game, player, target, x, y, z, w):
     m = trap_source["trapped"][target]["manipulations"]
     trap_source["trapped"][target]["manipulations"] = [mm for mm in m if not (((mm["x"]==x and mm["y"]==y) or (mm["x"]==y and mm["y"]==x)) and mm["z"]==z)] + ([{"x":x, "y":y, "z":z, "w":w}] if w != "$Default" else [])
     output(trap_source_name, "set {{{x},{y}}} returns {w} is innocent for kill {z}".format(x=x,y=y,z=z,w=w))
-
+"""
 messages = []
 def output(audience, message):
     m = "{}: {}".format(audience, message)
@@ -766,13 +903,21 @@ def command_to_json(command):
         elif l[1] == "trap-manipulate":
             return {"action":l[1],"player":l[0],"target":l[2],"info":json.loads(l[3])}
         elif l[1] == "trap-manipulate-remove-index":
-            return {"action":l[1],"player":l[0],"target":l[2],"index":l[3]}
+            return {"action":l[1],"player":l[0],"target":l[2],"index":int(l[3])}
         elif l[1] == "intro":
             return {"action":l[1],"player":l[0]}
         elif l[1] == "drop":
             return {"action":l[1],"player":l[0]}
         elif l[1] == "conscript":
             return {"action":l[1],"player":l[0]}
+        elif l[1] == "gravedig":
+            return {"action":l[1],"player":l[0], "target":l[2], "type":l[3]}
+        elif l[1] == "gravePlant":
+            return {"action":l[1],"player":l[0], "target":l[2], "role":l[3], "alignment":l[4]}
+        elif l[1] == "census":
+            return {"action":l[1],"player":l[0], "target":l[2]}
+        elif l[1] == "fortune_tell":
+            return {"action":l[1],"player":l[0], "target":l[2], "kill":l[3]}
         raise IllegalAction("bad syntax command not recognized:"+command)
 
 
@@ -842,13 +987,21 @@ def json_to_command(json_obj):
         elif action == 'trap-manipulate':
             return player + ' trap-manipulate ' + json_obj['target'] + " '" + json.dumps(json_obj['info']) + "'"
         elif action == 'trap-manipulate-remove-index':
-            return player + ' trap-manipulate-remove-index ' + json_obj['target'] + ' ' + json_obj['index']
+            return player + ' trap-manipulate-remove-index ' + json_obj['target'] + ' ' + str(json_obj['index'])
         elif action == 'intro':
             return player + ' intro'
         elif action == 'drop':
             return player + ' drop'
         elif action == 'conscript':
             return player + ' conscript'
+        elif action == 'gravedig':
+            return player + ' gravedig ' + json_obj['target'] + ' ' +json_obj['type']
+        elif action == 'gravePlant':
+            return player + ' gravePlant ' + json_obj['target'] + ' '+json_obj['role']+' '+json_obj['alignment']
+        elif action == 'census':
+            return player + ' census ' + json_obj['target']
+        elif action == 'fortune_tell':
+            return player + ' fortune_tell ' + json_obj['target'] + ' ' + json_obj['kill'] 
         else:
             raise ValueError('Invalid action type: ' + action)
 
@@ -892,7 +1045,7 @@ def do_command(game, command):
             check_valid_player(game, x)
             check_valid_player(game, y)
             check_valid_player(game, z)
-            if "result" not in command:
+            if "result" not in command or command["result"]=="":
                 (x,y,z,w) = investigate(game, player, x, y, z)
                 command["result"] = w
             else:
@@ -918,6 +1071,14 @@ def do_command(game, command):
             else:
                 result = see(game, player, command["target"])
                 command["result"] = result
+        elif action == "gravedig":
+            gravedig(game, player, command["target"], command["type"])
+        elif action == "gravePlant":
+            set_gravedig(game, player, command["target"], command["role"], command["alignment"])
+        elif action == "census":
+            census(game, player, command["target"])
+        elif action == "fortune_tell":
+            fortune_tell(game, player, command["target"], command["kill"])
         elif action == "kill":
             check_valid_player(game, command["target"])
             if game["players"][command["target"]]["alive"]:
@@ -962,7 +1123,6 @@ def do_command(game, command):
             set_trap_investigation(game, player, target, x, y, z, w)
         elif action == "trap-manipulate":
             target = command["target"]
-            print(command["info"])
             set_trap_info(game, player, target, command["info"])
         elif action == "trap-manipulate-remove-index":
             remove_trap_info(game,player, command["target"], command["index"])
