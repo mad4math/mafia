@@ -87,7 +87,7 @@ var xhttp = new XMLHttpRequest();
 xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
         //console.log(this.responseText);
-        var games = this.responseText.split("/");
+        var games = JSON.parse(this.responseText);
         s = "";
         for(var i=0;i<games.length;i++) {
             s += `<input type="radio" name="game_id" value="${games[i]}" id="${games[i]}"${(i==0)?' checked=True':''}><label for="${games[i]}">${games[i]}</label><br>`

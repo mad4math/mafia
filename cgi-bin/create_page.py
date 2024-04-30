@@ -203,7 +203,7 @@ def faction(game, player):
             """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>{{<b>{x}, {y}</b>}} for kill <b>{z}</b> returns <b>{w}</b> is innocent.
                 """.format(x = trapped_settings["manipulations"][i]["suspect1"], y = trapped_settings["manipulations"][i]["suspect2"], z = trapped_settings["manipulations"][i]["kill"],
                  w = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
-            aa += "<br><br>"
+            #aa += "<br><br>"
         elif role == "seer":
             aa += """
             Now that {player} is trapped, you can control the results they see. Using the dropdowns below, you can select what results they will see
@@ -215,7 +215,7 @@ def faction(game, player):
             aa += """Current manipulations:<br>
             """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as <b>{y}</b>
                 """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
-            aa += "<br><br>"
+            
         elif role == "gravedigger":
             aa += """
             Now that {player} is trapped, you can control the results they see. Using the dropdowns below, you can select what results they will see
@@ -230,7 +230,7 @@ def faction(game, player):
             """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as <b>{y} and {z}</b>
                 """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["roleResult"],
                  z = trapped_settings["manipulations"][i]["alignmentResult"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
-            aa += "<br><br>"
+            
         elif role == "censusmaster":
             aa += """
             Now that {player} is trapped, you can control the results they see. Anything you don't specify will resolve as
@@ -241,7 +241,7 @@ def faction(game, player):
             aa += """Current manipulations:<br>
             """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as having a count of <b>{y}</b>
                 """.format(x = trapped_settings["manipulations"][i]["x"], y = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
-            aa += "<br><br>"
+            
         elif role == "fortune teller":
             aa += """
             Now that {player} is trapped, you can control the results they see. Anything you don't specify will resolve as
@@ -254,11 +254,12 @@ def faction(game, player):
             """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as having a <b>{z}</b> omen for the death of <b>{y}</b>
                 """.format(x = trapped_settings["manipulations"][i]["x"], y = trapped_settings["manipulations"][i]["y"],
                  z = trapped_settings["manipulations"][i]["result"], player = player, i=i) for i in range(len(trapped_settings["manipulations"])))
-            aa += "<br><br>"
+            
         aa += "</div>"
         return aa
+    a = ""
     if game["players"][player]["team"]=="mafia":
-        a = """
+        a += """
         You are the mafia! The mafia team is <b>{}</b><br>""".format(",".join(p for p in game["players"] if game["players"][p]["team"]=="mafia"))
         if mafia.USE_BUDDY:
             a += """
@@ -267,22 +268,31 @@ def faction(game, player):
             """.format(alive_options, all_players_options, game["mafia"]["traps"])
         else:
             a += trap_interface(game["mafia"]["traps"], game["mafia"]["trapped"])
-        return a
     elif game["players"][player]["team"]=="sk":
-        a = """
+        a += """
         You are a serial killer. You are on the mafia's team, but you don't know who the mafia are. You may kill once every 2 game days, starting day 1.<br>
         """
         #        days remaining until you may next kill: <b>{}</b>""".format(game["players"][player]["cooldown"])
         a += trap_interface(game["players"][player]["traps"], game["players"][player]["trapped"])
-        return a
     else:
         if mafia.USE_BUDDY:
-            a = """
+            a += """
             You are <b>town</b>. You buddy is <b>{}</b>. You both know that each other is town, and share some role actions. You should coordinate with each other!
             """.format(game["players"][player]["buddy"])
         else:
-            a = """ You are <b>town</b>."""
-        return a
+            a += """ You are <b>town</b>."""
+    if game["players"][player]["team"] == "mafia":
+        a += """<br>
+        Set a bad omen for a future kill:<select id="mafiaOmenTarget">{target}</select> will have a Bad omen for the future death of <select id="mafiaOmenKill">{kill}</select>
+        <button id="addOmen" onclick="sendOmen()">Submit</button>
+        <br>(Note: You need to set who will have a bad omen before you make a kill; setting this field has no effect if you never kill the player.)<br>
+        Previously set omens:<br>
+        {omens}
+        <br><br>
+        """.format(target = "\n".join(option(x) for x in player_list(game)), kill = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"]),
+            omens = "\n".join("""<button id="removeOmen" onclick="removeOmen('{y}')">Remove</button> {x} will have a Bad omen for the future death of {y}""".format(x=game["mafia"]["omens"][x],y=x) for x in game["mafia"]["omens"]))
+    return a 
+
 def display(game, player, messages):
     allowed = [player, "public", "error"]
     if game["players"][player]["team"]=="mafia":
@@ -297,22 +307,24 @@ def player_info(game, player, messages):
               <div>
                 Vote for a player to execute:<br>
                 <select id="vote">
-                {}
+                {vote_options}
                 </select>
       <button onClick=sendVote()>Send Vote</button>
-      Currently voting for: <b>{}</b>
-      <input type="checkbox" onClick=sendVoteNoExecution() id="no-execution-checkbox" {}><label for="no-execution-checkbox">Vote no execution if legal</label>
+      Currently voting for: <b>{vote}</b>
+      <input type="checkbox" onClick=sendVoteNoExecution() id="no-execution-checkbox" {no_execute}><label for="no-execution-checkbox">Vote no execution if legal</label>
     </div>
     <div id="faction-abilities">
-    {}
+    {faction}
     </div>
     <div id="role-abilities">
-    {}
+    {role}
     </div>
     <h4> Game Log </h4>
-    <div id="display" >{}</div>
-    """.format("\n".join(option(x) for x in votable), 
-        game["players"][player]["vote"], "checked" if game["players"][player]["vote_no_execution"] else "", faction(game,player),role(game,player), display(game,player,messages))
+    <div id="display" >{display}</div>
+    """.format(vote_options = "\n".join(option(x) for x in votable), 
+        vote = game["players"][player]["vote"] if not (mafia.can_vote_no_execution(game) and game["players"][player]["vote_no_execution"]) else """
+        <span style="text-decoration: line-through">{}</span>No Execution""".format(game["players"][player]["vote"]), no_execute = "checked" if game["players"][player]["vote_no_execution"] else "", 
+        faction = faction(game,player),role = role(game,player), display = display(game,player,messages))
 
 def main_page(game, player, messages): 
     h="""

@@ -21,7 +21,7 @@ def setup(game):
     game["deaths"] = {}
     game["votes"] = []
     game["day"] = 0
-    game["mafia"] = {"traps":2, "trapped":{}, "untrappable":[]}
+    game["mafia"] = {"traps":2, "trapped":{}, "untrappable":[], "omens":{}}
     for player in game["players"]:
         game["players"][player]["alive"] = True
         game["players"][player]["vote_no_execution"] = False
@@ -57,6 +57,7 @@ def setup(game):
         elif p["role"] == "investigator":
             p["frames"] = 1
             p["investigations"] = 0
+            p["kills_investigated"] = {}
         elif p["role"] == "gravedigger":
             p["roleChecks"] = 0
             p["alignmentChecks"] = 1
@@ -134,6 +135,8 @@ with open("players.txt") as file:
     with open("game.txt","w") as out:
         out.write(json.dumps(game))
 """
+def can_vote_no_execution(game):
+    return game["day"] <= 1 or not any(game["deaths"][x]["day"] == game["day"] for x in game["deaths"])
 
 def rollover(game):
     r = []
@@ -141,13 +144,12 @@ def rollover(game):
     #count the votes, and limit the saints and sinner lists.
     votes = {}
     alive = [player for player in g if g[player]["alive"]]
-    kill_today = any(game["deaths"][x]["day"] == game["day"] for x in game["deaths"])
     for player in alive:
         p = g[player]
         if p["role"] == "priest":
             p["tomorrow"]["saints"] = p["tomorrow"]["saints"][:int(len(alive)*.2+.99)]
             p["tomorrow"]["sinners"] = p["tomorrow"]["sinners"][:int(len(alive)*.2+.99)]
-        vote = g[player]["vote"] if (kill_today and game["day"]>1) or not g[player]["vote_no_execution"] else "no-execution"
+        vote = g[player]["vote"] if not (can_vote_no_execution(game) and g[player]["vote_no_execution"]) else "no-execution"
         if vote not in votes:
             votes[vote] = [player]
         else:
@@ -210,7 +212,7 @@ def rollover(game):
             if p["cooldown"] > 0:
                 p["cooldown"] -= 1
         if p["role"] == "investigator":
-            p["investigations"] = 2
+            p["investigations"] = 1
         elif p["role"] == "gravedigger":
             p["roleChecks"] = 1
         elif p["role"] == "censusmaster":
@@ -300,6 +302,8 @@ def kill(game, killer, victim, time, location):
         raise IllegalAction()
     game["deaths"][victim] = {"killer":killer,"location":location,"time":time,"investigations":[],"framed":[],"true_killer":killer, "day":game["day"], "omen":[]}
     game["players"][victim]["alive"] = False
+    if victim in game["mafia"]["omens"]:
+        game["deaths"][victim]["omen"] = [game["mafia"]["omens"][victim]]
     if game["players"][killer]["team"] == "sk":
         game["players"][killer]["cooldown"] = 3
     #handle priests
@@ -387,7 +391,7 @@ def untrap(game, player, target):
 
 def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, correctPerson):
     buddy = get_alive_buddy(game, player)
-    game["players"][buddy]["investigations"][kill] = 2*(correctPerson + correctPlace + correctTime)
+    game["players"][buddy]["investigations"][kill] = 1*(correctPerson + correctPlace + correctTime)
     l = (["time"] if correctTime else []) + (["location"] if correctPlace else []) + (["person"] if correctPerson else [])
     game["players"][player]["resolved"][kill] = 1
     if l:
@@ -476,7 +480,6 @@ def see(game, player, target, result=None):
             for x in mm:
                 if x["target"] == target:
                     possible_results = [x["result"]]
-                    break
         print(possible_results)
         #possible_results = roles if trapped(game, player) else [game["players"][target]["role"]]
         if result==None:
@@ -513,9 +516,15 @@ def investigate(game,player, x, y, z, w=None):
     if p["role"] == "investigator":
         if p["investigations"]==0:
             raise IllegalAction("You are out of investigations!")
+        elif z in p["kills_investigated"] and p["kills_investigated"][z] >= 1:
+            raise IllegalAction("Can't investigate the same kill more than once!")
         else:
             r = do_investigation(game, player, x, y, z, w)
             p["investigations"] -= 1
+            if z not in p["kills_investigated"]:
+                p["kills_investigated"][z] = 1
+            else:
+                p["kills_investigated"][z] += 1
             return r
     elif p["role"] == "prophet":
         if z not in p["investigations"] or p["investigations"][z]==0:
@@ -597,6 +606,14 @@ def set_trap_info(game, player, target, info):
     if not target in trap_source["trapped"]:
         raise IllegalAction("Can't maniuplate a player you haven't trapped yet!")
     m = trap_source["trapped"][target]["manipulations"]
+    if game["players"][target]["role"] == "seer":
+        trap_source["trapped"][target]["manipulations"] = [x for x in trap_source["trapped"][target]["manipulations"] if x["target"]!=info["target"]]
+    elif game["players"][target]["role"] == "gravedigger":
+        trap_source["trapped"][target]["manipulations"] = [x for x in trap_source["trapped"][target]["manipulations"] if x["target"]!=info["target"]]
+    elif game["players"][target]["role"] == "censusmaster":
+        trap_source["trapped"][target]["manipulations"] = [x for x in trap_source["trapped"][target]["manipulations"] if x["x"]!=info["x"]]
+    elif game["players"][target]["role"] == "censusmaster":
+        trap_source["trapped"][target]["manipulations"] = [x for x in trap_source["trapped"][target]["manipulations"] if (x["x"]!=info["x"] or x["y"]!=info["y"])]
     trap_source["trapped"][target]["manipulations"] += [info]
 
 def remove_trap_info(game, player, target, i):
@@ -701,8 +718,18 @@ def fortune_tell(game, player, target, kill):
             result = "Good"
     output(get_alive_buddy(game, player), "You feel {result} omens about {target} for the death of {kill}".format(target=target, result=result, kill=kill))
 
+def add_mafia_omen(game, player, target, kill):
+    check_valid_player(game, target)
+    check_valid_player(game, kill)
+    if not game["players"][kill]["alive"]:
+        raise IllegalAction("Can't set omens of players that have already died!")
+    game["mafia"]["omens"][kill] = target
 
-
+def remomve_mafia_omen(game, player, kill):
+    check_valid_player(game, kill)
+    if not game["players"][kill]["alive"]:
+        raise IllegalAction("Can't set omens of players that have already died!")
+    del game["mafia"]["omens"][kill]
 
 
 
@@ -918,6 +945,10 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0], "target":l[2]}
         elif l[1] == "fortune_tell":
             return {"action":l[1],"player":l[0], "target":l[2], "kill":l[3]}
+        elif l[1] == "set_omen":
+            return {"action":l[1],"player":l[0], "target":l[2], "kill":l[3]}
+        elif l[1] == "remove_omen":
+            return {"action":l[1],"player":l[0], "kill":l[2]}
         raise IllegalAction("bad syntax command not recognized:"+command)
 
 
@@ -1002,6 +1033,10 @@ def json_to_command(json_obj):
             return player + ' census ' + json_obj['target']
         elif action == 'fortune_tell':
             return player + ' fortune_tell ' + json_obj['target'] + ' ' + json_obj['kill'] 
+        elif action == 'set_omen':
+            return player + ' set_omen ' + json_obj['target'] + ' ' + json_obj['kill'] 
+        elif action == 'remove_omen':
+            return player + ' remove_omen ' + json_obj['kill'] 
         else:
             raise ValueError('Invalid action type: ' + action)
 
@@ -1079,6 +1114,10 @@ def do_command(game, command):
             census(game, player, command["target"])
         elif action == "fortune_tell":
             fortune_tell(game, player, command["target"], command["kill"])
+        elif action == "set_omen":
+            add_mafia_omen(game, player, command["target"], command["kill"])
+        elif action == "remove_omen":
+            remomve_mafia_omen(game, player, command["kill"])
         elif action == "kill":
             check_valid_player(game, command["target"])
             if game["players"][command["target"]]["alive"]:

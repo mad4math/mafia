@@ -31,7 +31,7 @@ function sendVoteNoExecution() {
   var xhttp = setupRequest();
   var c = gg();
   c.command.action = "vote-no-execution";
-  c.command.yes = document.getElementById("no-execution-checkbox").checked;
+  c.command.yes = document.getElementById("no-execution-checkbox").checked? 1 : 0;
   xhttp.send(JSON.stringify(c));
 }
 function sendInvestigation() {
@@ -160,6 +160,21 @@ function sendFortune() {
   c.command.kill = getInput("fortuneKill");
   xhttp.send(JSON.stringify(c));
 }
+function sendOmen() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "set_omen";
+  c.command.target = getInput("mafiaOmenTarget");
+  c.command.kill = getInput("mafiaOmenKill");
+  xhttp.send(JSON.stringify(c));
+}
+function removeOmen(y) {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "remove_omen";
+  c.command.kill = y;
+  xhttp.send(JSON.stringify(c));
+}
 
 
 function sendTrappedInvestigation(player) {
@@ -260,8 +275,6 @@ function removeTrappedSeer(player, x) {
 
 function setPossibleInvestigationResults(e) {
 
-  console.log(e.target.parentElement);
-  console.log(e.target.parentElement.getElementsByClassName("investigationResultSubmission")[0]);
   var x = e.target.parentElement.getElementsByClassName("trapInvestigationX")[0].value;
   var y = e.target.parentElement.getElementsByClassName("trapInvestigationY")[0].value;
   var s = "<option value=\""+x+"\">"+x+"</option>" + "<option value=\""+y+"\">"+y+"</option>";// + "<option value=\"$Default\">Default</option>";
@@ -277,7 +290,6 @@ roleActionKeys = {
 
 function setupListeners() {
   for(var e of document.getElementsByClassName("trapInvestigationX")) {
-    console.log(e);
     e.addEventListener('change', setPossibleInvestigationResults);
   }
   for(var e of document.getElementsByClassName("trapInvestigationY")) {

@@ -24,7 +24,7 @@ class MyServer(SimpleHTTPRequestHandler):
         if path == "get-games":
             response = get_games.get_games()
             self.send_response(200)
-            self.send_header("Content-type", "text/plain")
+            self.send_header("Content-type", "text/json")
             self.end_headers()
             out.write(response)
         elif path == "generate-game":
@@ -59,7 +59,7 @@ class MyServer(SimpleHTTPRequestHandler):
     def do_POST(self):
         url = urllib.parse.urlparse(self.path)
         path = url.path[1:]
-        
+
         d = json.loads(str(self.rfile.read(int(self.headers["Content-Length"])), "utf-8"))
         if path == "update-player":
             response = update_player.update_player(d)

@@ -12,4 +12,4 @@ def get_games():
 			return game
 
 	games.sort(key = get_game_time, reverse=True)
-	return "/".join(games)
+	return json.dumps(games)
