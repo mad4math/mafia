@@ -175,6 +175,15 @@ function removeOmen(y) {
   c.command.kill = y;
   xhttp.send(JSON.stringify(c));
 }
+function sendPlant() {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "grave_plant";
+  c.command.target = getInput("gravedigPlantTarget");
+  c.command.role = getInput("gravedigPlantRole");
+  c.command.alignment = getInput("gravedigPlantAlignment");
+  xhttp.send(JSON.stringify(c));
+}
 
 
 function sendTrappedInvestigation(player) {

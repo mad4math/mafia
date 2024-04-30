@@ -28,11 +28,12 @@ def role(game, player):
             """.format(option("")+all_players_options)
             mf = """
             <br>
-            Frames left: {}<br>
-            Frame <select id="framed">{}</select> for <select id="frame-victim">{}</select>
-            <button onClick=sendFrame()>Frame</button>
+            Frames left: {frames}<br>
+            Frame <select id="framed">{target}</select> for the death of <select id="frame-victim">{victim}</select>
+            <button onClick=sendFrame()>Frame</button> (Note that you can frame before a death has happened; it won't have any effect until they die.)
+            They will appear guilty for any investigations on this kill.
             <br>
-            """.format(p["frames"],all_players_options, deaths_options)
+            """.format(frames = p["frames"],target = all_players_options,victim = all_players_options)
         role_actions += """
         Submit an investigation: (You have <b>{}</b> left today.)<br>
         <select id="A">{}</select> and <select id="B">{}</select> for kill <select id="kill">{}</select>{}
@@ -98,11 +99,12 @@ def role(game, player):
                 """.format(gravedig_options = gravedig_options)
         if game["day"]>0 and p["plants"]>0 and p["team"] != "town":
             role_actions += """
-            You can change the role and alignment seen by other gravediggers for a partiuclar player {x} more times this game.<br>
+            You can change the role and alignment seen by other gravediggers for a partiuclar player {x} more times this game. (You can plant evidence before the player dies, it won't have any until the player dies.)<br>
             Change <select id="gravedigPlantTarget">{gravedig_options}</select> to role
-            <<select id="gravedigPlantRole">{role}</select> and alignment
+            <select id="gravedigPlantRole">{role}</select> and alignment
             <select id="gravedigPlantAlignment">{alignment}</select>
-            """.format(gravedig_options = "\n".join(option(x) for x in player_list(game)), role = "\n".join(option(x) for x in mafia.roles),
+            <button onclick="sendPlant()">Plant Evidence</button>
+            """.format(x=p["plants"], gravedig_options = "\n".join(option(x) for x in player_list(game)), role = "\n".join(option(x) for x in mafia.roles),
                 alignment = "\n".join(option(x) for x in ["town", "mafia"]))
     elif p["role"] == "censusmaster":
         if game["day"]>0 and p["roleCounts"]>0:
@@ -188,15 +190,15 @@ def faction(game, player):
         """.format(player=player, role=role)
         if role == "investigator" or role == "prophet":
             aa += """
-            Now that {player} is trapped, you can control the results they recieve on investigations. Using the dropdowns below,
-            you can select what results they should recieve for specific investigations. Anything you don't specify will resolve as
+            Now that {player} is trapped, you can control the results they receive on investigations. Using the dropdowns below,
+            you can select what results they should receive for specific investigations. Anything you don't specify will resolve as
             if they were not trapped.<br>
             <select class="trapInvestigationX">{x}</select> and <select class="trapInvestigationY">{y}</select> for kill <select class="trapInvestigationZ">{z}</select>
             should return <select class="investigationResultSubmission">{w}</select><button onclick="sendTrappedInfo('{player}','investigator')">Submit</button>
             <br>
-            """.format(x = "\n".join(option(x) for x in player_list(game)+["$EVERYONE"]),
-            y = "\n".join(option(x) for x in player_list(game)+["$EVERYONE"]),
-            z = "\n".join(option(x) for x in list(game["deaths"].keys())+["$EVERYONE"]),
+            """.format(x = "\n".join(option(x) for x in ["$EVERYONE"]+player_list(game)),
+            y = "\n".join(option(x) for x in ["$EVERYONE"]+player_list(game)),
+            z = "\n".join(option(x) for x in ["$EVERYONE"]+list(game["deaths"].keys())),
             w = "",
             player = player)
             aa += """Current manipulations:<br>
@@ -225,7 +227,7 @@ def faction(game, player):
             <select class="gravediggerTrapAlignmentResult">{z}</select> 
             <button onclick="sendTrappedInfo('{player}','gravedigger')">Submit</button>
             """.format(x = "\n".join(option(x) for x in player_list(game)), y = "\n".join(option(x) for x in mafia.roles), 
-                z = "\n".join(option(x) for x in ["town","mafia","sk"]), player = player) 
+                z = "\n".join(option(x) for x in ["town","mafia"]), player = player) 
             aa += """Current manipulations:<br>
             """ + "<br>".join("""<button onclick="removeTrappedInfo('{player}',{i})">Remove</button>Sees <b>{x}</b> as <b>{y} and {z}</b>
                 """.format(x = trapped_settings["manipulations"][i]["target"], y = trapped_settings["manipulations"][i]["roleResult"],

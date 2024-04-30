@@ -36,6 +36,7 @@ def setup(game):
         output(player, "{} is <b>{}</b>".format(player, p["team"]))
         p["roleblocked"] = False
         p["vote"] = player
+        p["framed"] = []
         if p["role"] == "prophet":
             #p["tomorrow"] = ""
             #p["today"] = ""
@@ -300,7 +301,7 @@ def promote_to_mafia(game, player):
 def kill(game, killer, victim, time, location):
     if game["players"][killer]["roleblocked"]:
         raise IllegalAction()
-    game["deaths"][victim] = {"killer":killer,"location":location,"time":time,"investigations":[],"framed":[],"true_killer":killer, "day":game["day"], "omen":[]}
+    game["deaths"][victim] = {"killer":killer,"location":location,"time":time,"investigations":[],"true_killer":killer, "day":game["day"], "omen":[]}
     game["players"][victim]["alive"] = False
     if victim in game["mafia"]["omens"]:
         game["deaths"][victim]["omen"] = [game["mafia"]["omens"][victim]]
@@ -431,11 +432,9 @@ def frame(game, player, kill, target):
         raise IllegalAction("Can't frame because you are roleblocked")
     if game["players"][player]["role"]!="investigator":
         raise IllegalAction("Can't frame because you aren't an investigator!")
-    if kill not in game["deaths"]:
-        raise IllegalAction("Can't frame someone for a death that didn't happen!")
     if game["players"][player]["frames"] < 1:
         raise IllegalAction("You already used you frame!")
-    game["deaths"][kill]["framed"]+=[target]
+    game["players"][kill]["framed"]+=[target]
     game["players"][player]["frames"] -= 1
     output(player, "{} framed {} for the death of {}".format(player, target, kill))
 
@@ -568,7 +567,7 @@ def do_investigation(game, player, x, y, z, w):
             output(player, "investigation of ({},{}) for {}'s death returns that {} is innocent".format(x,y,z,w))
             return (x,y,z,w)
 
-    guiltiness = lambda x: 1 if (game["deaths"][z]["killer"] == x or x in game["deaths"][z]["framed"]) else 0
+    guiltiness = lambda x: 1 if (game["deaths"][z]["killer"] == x or x in game["players"][z]["framed"]) else 0
     xGuilt = guiltiness(x)
     yGuilt = guiltiness(y)
     legal = []
@@ -633,6 +632,7 @@ def set_gravedig(game, player, target, role, alignment):
     if game["players"][player]["plants"] < 1:
         raise IllegalAction("Can't plant evidence again!")
     check_valid_player(game, target)
+    game["players"][player]["plants"] -= 1
     game["players"][target]["setGrave"] = {"role": role, "alignment": alignment}
     output(player, "planted evidence of role {role} and alignment {alignment} on player {target}".format(role=role, alignment=alignment, target=target))
 
@@ -712,7 +712,7 @@ def fortune_tell(game, player, target, kill):
             result = "Good"
         elif target == game["deaths"][kill]["killer"]:
             result = "Bad"
-        elif target in game["deaths"][kill]["omen"]:
+        elif target in game["deaths"][kill]["omen"] or target in game["players"][kill]["framed"]:
             result = "Bad"
         else:
             result = "Good"
@@ -730,6 +730,7 @@ def remomve_mafia_omen(game, player, kill):
     if not game["players"][kill]["alive"]:
         raise IllegalAction("Can't set omens of players that have already died!")
     del game["mafia"]["omens"][kill]
+
 
 
 
@@ -939,7 +940,7 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0]}
         elif l[1] == "gravedig":
             return {"action":l[1],"player":l[0], "target":l[2], "type":l[3]}
-        elif l[1] == "gravePlant":
+        elif l[1] == "grave_plant":
             return {"action":l[1],"player":l[0], "target":l[2], "role":l[3], "alignment":l[4]}
         elif l[1] == "census":
             return {"action":l[1],"player":l[0], "target":l[2]}
@@ -1027,8 +1028,8 @@ def json_to_command(json_obj):
             return player + ' conscript'
         elif action == 'gravedig':
             return player + ' gravedig ' + json_obj['target'] + ' ' +json_obj['type']
-        elif action == 'gravePlant':
-            return player + ' gravePlant ' + json_obj['target'] + ' '+json_obj['role']+' '+json_obj['alignment']
+        elif action == 'grave_plant':
+            return player + ' grave_plant ' + json_obj['target'] + ' '+json_obj['role']+' '+json_obj['alignment']
         elif action == 'census':
             return player + ' census ' + json_obj['target']
         elif action == 'fortune_tell':
@@ -1108,7 +1109,8 @@ def do_command(game, command):
                 command["result"] = result
         elif action == "gravedig":
             gravedig(game, player, command["target"], command["type"])
-        elif action == "gravePlant":
+        elif action == "grave_plant":
+            print(command)
             set_gravedig(game, player, command["target"], command["role"], command["alignment"])
         elif action == "census":
             census(game, player, command["target"])
