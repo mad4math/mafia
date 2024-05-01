@@ -19,6 +19,7 @@
            updateDayEndMessage();
            updateProphetResponses();
            createKillInputs();
+           createRitualInputs();
            document.getElementById("rollover_time").value = getCurrentDateRolloverTime();
         }
 
@@ -33,6 +34,14 @@
         var target = this;
         return target.split(search).join(replacement);
     };
+
+    function sendSingleCommand(command) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = receiveGameState;
+    xhttp.open("POST", "update-admin", true);
+    xhttp.setRequestHeader("Content-type", "application/json");
+    xhttp.send(JSON.stringify({"id":get_game_id(),"command":command}));
+    }
 
     function updateGame() {
     var xhttp = new XMLHttpRequest();
@@ -150,15 +159,28 @@ function scheduleKill() {
     document.getElementById("command_box").value += "\n" + s + " "+document.getElementById("killer").value + " kill " + document.getElementById("victim").value + " at " + document.getElementById("kill_time").value + " in \"" + document.getElementById("kill_place").value + "\"";
     updateGame();
 }
-function createKillInputs() {
+function livingPlayerInputs() {
     r = "";
     for(player in gameState.players) {
         if(gameState.players[player].alive) {
             r += `<option value=${player}>${player}</option>`
         }
     }
+    return r;
+}
+function createKillInputs() {
+    r = livingPlayerInputs();
     document.getElementById("killer").innerHTML = r;
     document.getElementById("victim").innerHTML = r;
+}
+
+function createRitualInputs() {
+    document.getElementById("ritual_investigation_option").innerHTML = livingPlayerInputs();
+}
+
+function grant_ritual_investigation() {
+    var c = {"action" : "grant_ritual_investigation", "player" : document.getElementById("ritual_investigation_option").value}
+    sendSingleCommand(c);
 }
 
 function rollover(game) {
@@ -321,6 +343,7 @@ function shuffleArray(arr) {
   <br>
   Post a kill: <select id="killer"></select> killed <select id="victim"></select><br> at time (hh:mm) <input id="kill_time"> in place <input id="kill_place"><br><button onclick=scheduleKill()>Schedule Kill Post
 </button><br>
+Grant ritual investigation to <select id="ritual_investigation_option"></select> <button onclick="grant_ritual_investigation()">Grant Investigation</button><br>
 Respond to prophets:<br>
 <div id="prophet_responses"></div>
 <br>

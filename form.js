@@ -297,13 +297,31 @@ roleActionKeys = {
   }
 }
 
+function sendAction(e) {
+  //send a role action. e is the event fired from pressing the submit button in that container.
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = e.target.parentElement.getAttribute("data-action");
+  for(var ee of e.target.parentElement.querySelectorAll("[data-a]")) {
+    console.log(ee);
+    c.command[ee.name] = ee.value;
+  }
+  console.log(c);
+  xhttp.send(JSON.stringify(c));
+}
+
 function setupListeners() {
-  for(var e of document.getElementsByClassName("trapInvestigationX")) {
-    e.addEventListener('change', setPossibleInvestigationResults);
-  }
-  for(var e of document.getElementsByClassName("trapInvestigationY")) {
-    e.addEventListener('change', setPossibleInvestigationResults);
-  }
+  for(var ee of document.getElementsByClassName("investigationResultSubmission")) {
+      for(var e of ee.parentElement.getElementsByClassName("trapInvestigationX")) {
+        e.addEventListener('change', setPossibleInvestigationResults);
+      }
+      for(var e of ee.parentElement.getElementsByClassName("trapInvestigationY")) {
+        e.addEventListener('change', setPossibleInvestigationResults);
+      }
+    }
+    for(var e of document.getElementsByName("submit")) {
+      e.addEventListener('click', sendAction);
+    }
 }
 window.addEventListener("load", function(){
     setupListeners();

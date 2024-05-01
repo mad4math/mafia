@@ -69,6 +69,10 @@ class MyServer(SimpleHTTPRequestHandler):
             response = save_admin.save_admin(d)
             self.send_response(200)
             self.send_header("Content-type", "text/plain")
+        elif path == "update-admin":
+            response = save_admin.update_admin_single_command(d)
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
         else:
             self.send_response(200)
             response = "bad post request"

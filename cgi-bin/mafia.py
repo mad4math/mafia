@@ -21,7 +21,7 @@ def setup(game):
     game["deaths"] = {}
     game["votes"] = []
     game["day"] = 0
-    game["mafia"] = {"traps":2, "trapped":{}, "untrappable":[], "omens":{}}
+    game["mafia"] = {"traps":3, "trapped":{}, "untrappable":[], "omens":{}}
     for player in game["players"]:
         game["players"][player]["alive"] = True
         game["players"][player]["vote_no_execution"] = False
@@ -37,6 +37,7 @@ def setup(game):
         p["roleblocked"] = False
         p["vote"] = player
         p["framed"] = []
+        p["additional_powers"] = []
         if p["role"] == "prophet":
             #p["tomorrow"] = ""
             #p["today"] = ""
@@ -63,6 +64,7 @@ def setup(game):
             p["roleChecks"] = 0
             p["alignmentChecks"] = 1
             p["plants"] = 1
+            p["gravedig_guesses"] = {}
         elif p["role"] == "censusmaster":
             p["roleCounts"] = 0
             p["mafiaCounts"] = 1
@@ -212,6 +214,9 @@ def rollover(game):
         if p["team"] == "sk":
             if p["cooldown"] > 0:
                 p["cooldown"] -= 1
+        for i in range(len(p["additional_powers"])):
+            if p["additional_powers"][i] == "ritual_investigation":
+                del p["additional_powers"][i]
         if p["role"] == "investigator":
             p["investigations"] = 1
         elif p["role"] == "gravedigger":
@@ -502,6 +507,21 @@ def infallible_investigate(game, player, guess):
         else:
             output(player, "{} did not kill your partner.".format(guess))
 
+def ritual_investigate(game,player, x, y, z, w=None):
+    if z not in game["deaths"]:
+        raise IllegalAction("Can't investigate someone who never died!")
+    if "ritual_investigation" not in game["players"][player]["additional_powers"]:
+        raise IllegalAction("You don't have a ritual investigation available!")
+    r = do_investigation(game, player, x, y, z, w, trappable=False)
+    for i in range(len(game["players"][player]["additional_powers"])):
+        if game["players"][player]["additional_powers"][i] == "ritual_investigation":
+            del game["players"][player]["additional_powers"][i]
+            break
+    return r
+
+def grant_ritual_investigation(game,player):
+    game["players"][player]["additional_powers"] += ["ritual_investigation"]
+
 def investigate(game,player, x, y, z, w=None):
     """
     player p investigates (x,y) for kill z, with desired result w
@@ -542,12 +562,12 @@ def investigate(game,player, x, y, z, w=None):
             return r
     else:
         raise IllegalAction("Can't investigate because you aren't an investigator or a prophet!")
-def do_investigation(game, player, x, y, z, w):
+def do_investigation(game, player, x, y, z, w, trappable=True):
     """doesn't check for legality, subroutine of investigate
     returns (x,y,z,w) = (suspect1, suspect2, death, result)"""
     buddy = get_alive_buddy(game,player)
     
-    if trapped(game,player) and not USE_BUDDY:
+    if trappable and trapped(game,player) and not USE_BUDDY:
         if w==None:
             mm = trapped_manipulations(game,player)["manipulations"]
             print(mm)
@@ -667,6 +687,32 @@ def gravedig(game, player, target, t):
             result = game["players"][target]["role"] if t == "role" else game["players"][target]["team"]
     output(get_alive_buddy(game, player), "grave dig of {target} reveals they were a {result}".format(target=target, result=result))
     return result
+
+def gravedig_role_guess(game, player, target, role):
+    if game["players"][player]["role"] != "gravedigger":
+        raise IllegalAction("Only gravediggers can gravedig!")
+    if target in game["players"][player]["gravedig_guesses"]:
+        raise IllegalAction("Can't guess again for that kill!")
+    if (game["players"][player]["team"] == "sk" and target in game["players"][player]["untrappable"]) or target in game["mafia"]["untrappable"]:
+        raise IllegalAction("Can't trap players you've already Seen!")
+    correct = role == game["players"][target]["role"] 
+    game["players"][player]["gravedig_guesses"][target] = {"role" : role, "frames_left": (1 if correct else 0)}
+    if correct:
+        output(player, "{target} was a {role}. You may now frame someone for their death".format(target=target, role=role))
+    else:
+        output(player, "{target} was not a {role}.".format(target=target, role=role))
+
+def gravedig_frame(game, player, kill, target):
+    if game["players"][player]["roleblocked"]:
+        raise IllegalAction("Can't frame because you are roleblocked")
+    if game["players"][player]["role"]!="gravedigger":
+        raise IllegalAction("Can't frame because you aren't an gravedigger!")
+    if kill not in game["players"][player]["gravedig_guesses"] or game["players"][player]["gravedig_guesses"][kill]["frames_left"] < 1:
+        raise IllegalAction("You already used you frame!")
+    game["players"][kill]["framed"]+=[target]
+    game["players"][player]["gravedig_guesses"][kill]["frames_left"] -= 1
+    output(player, "{} framed {} for the death of {}".format(player, target, kill))
+
 
 def census(game, player, target):
     result = None
@@ -885,7 +931,7 @@ def command_to_json(command):
         return {"action":"introlink", "link":l[1]}
     else:
         player = l[0]
-        if l[1] == "investigate":
+        if l[1] == "investigate" or l[1] == "ritual_investigate":
             d = {"action":l[1],"player":l[0],"suspect1":l[2],"suspect2":l[3],"kill":l[5]}
             if len(l)==6:
                 return d
@@ -950,6 +996,13 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0], "target":l[2], "kill":l[3]}
         elif l[1] == "remove_omen":
             return {"action":l[1],"player":l[0], "kill":l[2]}
+        elif l[1] == "gravedig_guess":
+            return {"action":l[1],"player":l[0], "target":l[2], "role":l[3]}
+        elif l[1] == "gravedig_frame":
+            return {"action":l[1],"player":l[0],"target":l[2], "kill":l[4]}
+        elif l[1] == "grant_ritual_investigation":
+            return {"action":l[1],"player":l[0]}
+
         raise IllegalAction("bad syntax command not recognized:"+command)
 
 
@@ -967,8 +1020,8 @@ def json_to_command(json_obj):
         return 'introlink ' + json_obj['link']
     else:
         player = json_obj['player']
-        if action == 'investigate':
-            command = player + ' investigate ' + json_obj['suspect1'] + ' ' + json_obj['suspect2'] + ' '
+        if action == 'investigate' or action == 'ritual_investigate':
+            command = player + ' {} '.format(action) + json_obj['suspect1'] + ' ' + json_obj['suspect2'] + ' '
             command += 'kill ' + json_obj['kill']
             if 'result' in json_obj:
                 command += ' result ' + json_obj['result'] + ' '
@@ -1038,6 +1091,12 @@ def json_to_command(json_obj):
             return player + ' set_omen ' + json_obj['target'] + ' ' + json_obj['kill'] 
         elif action == 'remove_omen':
             return player + ' remove_omen ' + json_obj['kill'] 
+        elif action == 'gravedig_guess':
+            return player + ' gravedig_guess ' + json_obj['target'] + ' '+json_obj['role']
+        elif action == 'gravedig_frame':
+            return player + ' gravedig_frame ' + json_obj['target'] + ' for ' + json_obj['kill']
+        elif action == 'grant_ritual_investigation':
+            return player + ' ' + action
         else:
             raise ValueError('Invalid action type: ' + action)
 
@@ -1088,6 +1147,20 @@ def do_command(game, command):
                 w = command["result"]
                 check_valid_player(game, w)
                 investigate(game, player, x, y, z, w=w)
+        elif action == "ritual_investigate":
+            x = command["suspect1"]
+            y = command["suspect2"]
+            z = command["kill"]
+            check_valid_player(game, x)
+            check_valid_player(game, y)
+            check_valid_player(game, z)
+            if "result" not in command or command["result"]=="":
+                (x,y,z,w) = ritual_investigate(game, player, x, y, z)
+                command["result"] = w
+            else:
+                w = command["result"]
+                check_valid_player(game, w)
+                ritual_investigate(game, player, x, y, z, w=w)
         elif action == "priest":
             if command["mode"] == "sinners":
                 submit_priest_list(game, player, command["list"], [])
@@ -1142,6 +1215,13 @@ def do_command(game, command):
             check_valid_player(game, command["target"])
             check_valid_player(game, command["kill"])
             frame(game, player, command["kill"], command["target"])
+        elif action == "gravedig_guess":
+            check_valid_player(game, command["target"])
+            gravedig_role_guess(game, player, command["target"], command["role"])
+        elif action == "gravedig_frame":
+            check_valid_player(game, command["target"])
+            check_valid_player(game, command["kill"])
+            gravedig_frame(game, player, command["kill"], command["target"])
         elif action == "trap":
             check_valid_player(game, command["target"])
             if USE_BUDDY and command["guess"] not in game["players"] and command["guess"]:
@@ -1173,6 +1253,8 @@ def do_command(game, command):
             game["players"][player]["alive"]=0
         elif action == "conscript":
             promote_to_mafia(game, player)
+        elif action == "grant_ritual_investigation":
+            grant_ritual_investigation(game,player)
     return (game, command)
 
 if __name__=="__main__":

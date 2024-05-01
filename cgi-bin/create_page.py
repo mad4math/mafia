@@ -4,6 +4,13 @@ option = lambda x:"<option value=\"{}\">{}</option>".format(x,x)
 player_list = lambda game:sorted(game["players"])
 game_intro = lambda game: game["intro"] if "intro" in game else "https://mafia.csail.mit.edu/24-01-town-square/m/5nfhnXrLAHyXcZzkg"
 
+def investigation_options(game,mafia):
+    return """Investigate <select name="suspect1" class="trapInvestigationX" data-a>{x}</select> and <select name="suspect2" class="trapInvestigationY" data-a>{y}</select>
+     for kill <select name="kill" data-a>{z}</select>
+    {w}<button name="submit">Submit</button>
+    """.format(x="\n".join(option(x) for x in player_list(game)), y="\n".join(option(x) for x in player_list(game)),
+        z="\n".join(option(x) for x in game["deaths"]), w = """with result <select class="investigationResultSubmission" name="result" data-a></select>""" if mafia else "")
+
 def role(game, player):
     p = game["players"][player]
     pl = player_list(game)
@@ -97,7 +104,7 @@ def role(game, player):
                 <select id="alignmentTarget">{gravedig_options}</select>
                 <button onclick="sendGravedigAlignment()">Gravedig</button><br>
                 """.format(gravedig_options = gravedig_options)
-        if game["day"]>0 and p["plants"]>0 and p["team"] != "town":
+        if p["team"] != "town":
             role_actions += """
             You can change the role and alignment seen by other gravediggers for a partiuclar player {x} more times this game. (You can plant evidence before the player dies, it won't have any until the player dies.)<br>
             Change <select id="gravedigPlantTarget">{gravedig_options}</select> to role
@@ -106,6 +113,16 @@ def role(game, player):
             <button onclick="sendPlant()">Plant Evidence</button>
             """.format(x=p["plants"], gravedig_options = "\n".join(option(x) for x in player_list(game)), role = "\n".join(option(x) for x in mafia.roles),
                 alignment = "\n".join(option(x) for x in ["town", "mafia"]))
+            role_actions += """
+            <div data-action="gravedig_guess">
+            You can guess the role of a player you've killed, and if you are right, you can frame them. <br>
+            (Note: This interface lets you submit a guess and frame for a living player. This is so you can complete your frame before the death is entered into the webapp and announced. It is against the rules to use this on a player you did not kill.)<br>
+            Guess the role for the death of <select name="target" data-a>{target}</select> as <select name="role" data-a>{role}</select>
+            <button name="submit">Submit</button></div>
+            {frames}
+            """.format(target = "\n".join(option(x) for x in player_list(game)), role = "\n".join(option(x) for x in mafia.roles), 
+                frames = "<br>".join("""<span data-action="gravedig_frame">You correctly guessed that {target} was a {role}. Frame <select name="target" data-a>{frameTarget}</select> for {target}'s death <input type="hidden" name="kill" value="{target}" data-a><button name="submit">Submit</button></span>""".format(
+                    target = x, role = p["gravedig_guesses"][x]["role"], frameTarget = all_players_options) for x in p["gravedig_guesses"] if p["gravedig_guesses"][x]["frames_left"] > 0))
     elif p["role"] == "censusmaster":
         if game["day"]>0 and p["roleCounts"]>0:
             role_actions += """
@@ -165,7 +182,11 @@ def role(game, player):
                 """.format(p["guesses"],all_players_options)
 
         role_actions += a
-
+    for power in p["additional_powers"]:
+        if power == "ritual_investigation":
+            role_actions += """
+            You have a ritual investigation today!<div data-action="ritual_investigate">{inv}</div>
+            """.format(inv = investigation_options(game, p["team"] != "town"))
     return role_actions
 def faction(game, player):
     alive_options = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"])
