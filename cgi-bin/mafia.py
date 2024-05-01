@@ -484,7 +484,6 @@ def see(game, player, target, result=None):
             for x in mm:
                 if x["target"] == target:
                     possible_results = [x["result"]]
-        print(possible_results)
         #possible_results = roles if trapped(game, player) else [game["players"][target]["role"]]
         if result==None:
             result = random.choice(possible_results)
@@ -570,7 +569,6 @@ def do_investigation(game, player, x, y, z, w, trappable=True):
     if trappable and trapped(game,player) and not USE_BUDDY:
         if w==None:
             mm = trapped_manipulations(game,player)["manipulations"]
-            print(mm)
             for m in reversed(mm):
                 if m["kill"] == z or m["kill"] == MANIP_WILDCARD:
                     x1 = m["suspect1"]
@@ -1183,7 +1181,6 @@ def do_command(game, command):
         elif action == "gravedig":
             gravedig(game, player, command["target"], command["type"])
         elif action == "grave_plant":
-            print(command)
             set_gravedig(game, player, command["target"], command["role"], command["alignment"])
         elif action == "census":
             census(game, player, command["target"])

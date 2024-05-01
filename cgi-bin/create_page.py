@@ -116,7 +116,7 @@ def role(game, player):
             role_actions += """
             <div data-action="gravedig_guess">
             You can guess the role of a player you've killed, and if you are right, you can frame them. <br>
-            (Note: This interface lets you submit a guess and frame for a living player. This is so you can complete your frame before the death is entered into the webapp and announced. It is against the rules to use this on a player you did not kill.)<br>
+            (Note: This interface lets you submit a guess and frame for a living player. This is so you can complete your frame before the death is entered into the webapp and announced. <b>It is against the rules to use this on a player you did not kill.</b>)<br>
             Guess the role for the death of <select name="target" data-a>{target}</select> as <select name="role" data-a>{role}</select>
             <button name="submit">Submit</button></div>
             {frames}
@@ -213,7 +213,7 @@ def faction(game, player):
             aa += """
             Now that {player} is trapped, you can control the results they receive on investigations. Using the dropdowns below,
             you can select what results they should receive for specific investigations. Anything you don't specify will resolve as
-            if they were not trapped.<br>
+            if they were not trapped. Because of the wildcard $EVERYONE, multiple rules may apply, in which case the last one submitted (at the bottom of the list) will take precedence.<br>
             <select class="trapInvestigationX">{x}</select> and <select class="trapInvestigationY">{y}</select> for kill <select class="trapInvestigationZ">{z}</select>
             should return <select class="investigationResultSubmission">{w}</select><button onclick="sendTrappedInfo('{player}','investigator')">Submit</button>
             <br>

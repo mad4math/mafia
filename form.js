@@ -303,10 +303,8 @@ function sendAction(e) {
   var c = gg();
   c.command.action = e.target.parentElement.getAttribute("data-action");
   for(var ee of e.target.parentElement.querySelectorAll("[data-a]")) {
-    console.log(ee);
     c.command[ee.name] = ee.value;
   }
-  console.log(c);
   xhttp.send(JSON.stringify(c));
 }
 
