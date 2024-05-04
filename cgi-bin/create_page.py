@@ -184,8 +184,8 @@ def role(game, player):
         role_actions += a
     for power in p["additional_powers"]:
         if power == "ritual_investigation":
-            role_actions += """
-            You have a ritual investigation today!<div data-action="ritual_investigate">{inv}</div>
+            role_actions += """<div data-action="ritual_investigate">
+            You have a ritual investigation today! (submit below) <br>{inv}</div>
             """.format(inv = investigation_options(game, p["team"] != "town"))
     return role_actions
 def faction(game, player):
