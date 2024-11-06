@@ -146,7 +146,7 @@ def rollover(game):
     g = game["players"]
     #count the votes, and limit the saints and sinner lists.
     votes = {}
-    alive = [player for player in g if g[player]["alive"]]
+    alive = sorted([player for player in g if g[player]["alive"]])
     for player in alive:
         p = g[player]
         if p["role"] == "priest":
@@ -181,9 +181,9 @@ def rollover(game):
         if execution!="no-execution":
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
-        for player in votes:
-            output("public", "{} was voted for by {}  ".format(player, ", ".join(votes[player])))
         for player in alive:
+            if player in votes:
+                output("public", "{} was voted for by {}  ".format(player, ", ".join(votes[player])))
             p = g[player]
             p["vote"] = player
 

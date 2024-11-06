@@ -116,7 +116,9 @@ function updateDayEndMessage() {
     if(gameState.day == 0)
         return;
     var s = "";
-    for(player in gameState.votes[gameState.day-1]) {
+    var pp = Object.keys(gameState.votes[gameState.day-1]);
+    pp.sort();
+    for(player of pp) {
         s += `@${player} was voted for by ${gameState.votes[gameState.day-1][player].map(x => "@"+x).join(", ")}  <br>`;
     }
     document.getElementById("day_end_message").innerHTML = s;
