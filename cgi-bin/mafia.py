@@ -161,8 +161,8 @@ def rollover(game):
     #determine who is executed, and publish the results
     if game["day"] > 0:
         d = game["day"]
-        players_random = [player for player in game["tiebreak"] if g[player]["alive"]]
-        max_vote_players = players_random + ["no-execution"]
+        #list of players which are winning the current vote, sorted in tiebreak order
+        max_vote_players = [player for player in game["tiebreak"] if g[player]["alive"]] + ["no-execution"]
         while d > 0 and len(max_vote_players) > 1:
             max_vote_this_day = max_vote_players
             max_vote = 0
@@ -181,9 +181,11 @@ def rollover(game):
         if execution!="no-execution":
             g[execution]["alive"] = False
         output("public", "{} was executed".format(execution))
-        for player in alive:
+        for player in alive+["no-execution"]:
             if player in votes:
                 output("public", "{} was voted for by {}  ".format(player, ", ".join(votes[player])))
+        #resent votes to self votes for the next day
+        for player in alive:
             p = g[player]
             p["vote"] = player
 
