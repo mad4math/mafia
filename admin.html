@@ -8,6 +8,7 @@
     var count;
     var players;
     var gameState;
+    var initState;
     function receiveGameState() {
         if (this.readyState == 4 && this.status == 200) {
            //console.log(this.responseText);
@@ -16,6 +17,7 @@
            count = this.responseText.split("`")[2];
            document.getElementById("common_actions").innerHTML = this.responseText.split("`")[3];
            gameState = JSON.parse(this.responseText.split("`")[4]);
+           initState = this.responseText.split("`")[5];
            updateDayEndMessage();
            updateProphetResponses();
            createKillInputs();
@@ -334,7 +336,7 @@ function shuffleArray(arr) {
 
   <!--<input id="game_id" value="test1">-->
   <button onClick=loadGame()>Load game</button>
-  <a href="newgame.html">new game</a>
+  <a href="newgame.html">new game</a><button onClick=navigator.clipboard.writeText(initState)>Copy initial state</button>
   <br>
   <textarea name="commands" id="command_box" rows="35" cols="72"></textarea>
   <br>
