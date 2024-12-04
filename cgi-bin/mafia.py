@@ -470,10 +470,10 @@ def submit_priest_list(game, player, sinners, saints):
     elif game["players"][player]["role"]!="priest":
         raise IllegalAction("Can't submit a priest list because you aren't a priest!")
     else:
-        if sinners:
+        if sinners != None:
             game["players"][player]["tomorrow"]["sinners"]=sinners
             output_player_buddy(game, player, "{} submitted lists of sinners: {} for day {}".format(player,sinners, game["day"]+1))
-        if saints:
+        if saints != None:
             game["players"][player]["tomorrow"]["saints"]=saints
             output_player_buddy(game, player, "{} submitted lists of saint: {} for day {}".format(player,saints, game["day"]+1))
 
@@ -1199,9 +1199,9 @@ def do_command(game, command):
                 ritual_investigate(game, player, x, y, z, w=w)
         elif action == "priest":
             if command["mode"] == "sinners":
-                submit_priest_list(game, player, command["list"], [])
+                submit_priest_list(game, player, command["list"], None)
             elif command["mode"] == "saints":
-                submit_priest_list(game, player, [], command["list"])
+                submit_priest_list(game, player, None, command["list"])
             else:
                 raise IllegalAction
         elif action == "predicts":

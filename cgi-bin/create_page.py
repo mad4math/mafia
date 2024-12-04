@@ -144,7 +144,7 @@ def role(game, player):
 
 
     elif p["role"] == "priest":
-        alive_selector = "<select>{}</select><br>".format(alive_options+option(" "))
+        alive_selector = "<select>{}</select><br>".format(option(" ")+alive_options)
         size = int(len([x for x in pl if game["players"][x]["alive"]])*.4)
         future_sinners = ", ".join(x if i < size else "<s>"+x+"</s>" for (i,x) in enumerate(p["tomorrow"]["sinners"]))
         remaining_size = size - len(p["tomorrow"]["sinners"])
