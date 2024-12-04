@@ -9,7 +9,7 @@ USE_BUDDY = False
 MANIP_WILDCARD = "$EVERYONE"
 
 #no gay knight
-roles = ["investigator","prophet","priest","vigilante","seer", "gravedigger", "censusmaster", "fortune teller"] #all the roles
+roles = ["investigator","prophet","priest","vigilante","seer", "censusmaster", "fortune teller"] #all the roles
 common_roles = ["investigator","prophet","priest","vigilante","seer", "fortune teller"]
 straight_roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles that aren't gay
 
@@ -24,6 +24,7 @@ def setup(game):
     game["mafia"] = {"traps":3, "trapped":{}, "untrappable":[], "omens":{}}
     for player in game["players"]:
         game["players"][player]["alive"] = True
+        game["players"][player]["jailed"] = False
         game["players"][player]["vote_no_execution"] = False
     for player in game["players"]:
         p = game["players"][player]
@@ -36,6 +37,7 @@ def setup(game):
         output(player, "{} is <b>{}</b>".format(player, p["team"]))
         p["roleblocked"] = False
         p["vote"] = player
+        p["jailbreak_votes"] = []
         p["framed"] = []
         p["additional_powers"] = []
         if p["role"] == "prophet":
@@ -67,7 +69,7 @@ def setup(game):
             p["gravedig_guesses"] = {}
         elif p["role"] == "censusmaster":
             p["roleCounts"] = 0
-            p["mafiaCounts"] = 1
+            p["mafiaCounts"] = 0
         elif p["role"] == "fortune teller":
             p["uses"] = 0
             p["killsChecked"] = []
@@ -147,22 +149,29 @@ def rollover(game):
     #count the votes, and limit the saints and sinner lists.
     votes = {}
     alive = sorted([player for player in g if g[player]["alive"]])
+    unjailed = sorted([player for player in g if g[player]["alive"] and not g[player]["jailed"]])
     for player in alive:
         p = g[player]
         if p["role"] == "priest":
-            p["tomorrow"]["saints"] = p["tomorrow"]["saints"][:int(len(alive)*.2+.99)]
-            p["tomorrow"]["sinners"] = p["tomorrow"]["sinners"][:int(len(alive)*.2+.99)]
-        vote = g[player]["vote"] if not (can_vote_no_execution(game) and g[player]["vote_no_execution"]) else "no-execution"
-        if vote not in votes:
-            votes[vote] = [player]
-        else:
-            votes[vote] += [player]
+            #p["tomorrow"]["saints"] = p["tomorrow"]["saints"][:int(len(alive)*.2+.99)]
+            #p["tomorrow"]["sinners"] = p["tomorrow"]["sinners"][:int(len(alive)*.2+.99)]
+            max_priest_size = int(len(alive)*.4)
+            p["tomorrow"]["sinners"] = p["tomorrow"]["sinners"][:max_priest_size]
+            max_priest_size -= len(p["tomorrow"]["saints"])
+            p["tomorrow"]["saints"] = p["tomorrow"]["saints"][:max_priest_size]
+
+        if not p["jailed"]:
+            vote = g[player]["vote"] if not (can_vote_no_execution(game) and g[player]["vote_no_execution"]) else "no-execution"
+            if vote not in votes:
+                votes[vote] = [player]
+            else:
+                votes[vote] += [player]
     game["votes"] += [votes]
     #determine who is executed, and publish the results
     if game["day"] > 0:
         d = game["day"]
         #list of players which are winning the current vote, sorted in tiebreak order
-        max_vote_players = [player for player in game["tiebreak"] if g[player]["alive"]] + ["no-execution"]
+        max_vote_players = [player for player in game["tiebreak"] if g[player]["alive"] and not g[player]["jailed"]] + ["no-execution"]
         while d > 0 and len(max_vote_players) > 1:
             max_vote_this_day = max_vote_players
             max_vote = 0
@@ -179,15 +188,32 @@ def rollover(game):
             output("test", max_vote_players)
         execution = max_vote_players[0]
         if execution!="no-execution":
-            g[execution]["alive"] = False
-        output("public", "{} was executed".format(execution))
+            g[execution]["jailed"] = True
+        output("public", "{} was jailed".format(execution))
         for player in alive+["no-execution"]:
             if player in votes:
                 output("public", "{} was voted for by {}  ".format(player, ", ".join(votes[player])))
+
+        #determine who is released from jail
+        unjail_threshold = int((len(unjailed))/2+1)
+        jailed = sorted([player for player in g if g[player]["alive"] and g[player]["jailed"]])
+        for player in jailed:
+            unjail_votes = []
+            for player2 in unjailed:
+                if player in g[player2]["jailbreak_votes"]:
+                    unjail_votes.append(player2)
+            if len(unjail_votes) >= unjail_threshold:
+                g[player]["jailed"] = False
+                output("public", "{} was released from jail with {} out of {} needed votes".format(player,len(unjail_votes),unjail_threshold))
+            output("public", "votes to release {player}:{votes}".format(player=player, votes=unjail_votes))
         #resent votes to self votes for the next day
         for player in alive:
             p = g[player]
             p["vote"] = player
+            p["jailbreak_votes"] = []
+
+        output("public", "living unjailed players:<b>"+", ".join(player for player in alive if not g[player]["jailed"])+"</b>")
+        output("public", "living jailed players:<b>"+", ".join(player for player in alive if g[player]["jailed"])+"</b>")
 
     #submit roleblocks for roleblockers at day start, because their action is mandatory.
     #also set all trapped players to roleblocked
@@ -397,6 +423,23 @@ def untrap(game, player, target):
     output(trap_source_name, "You released {} from their trap".format(target))
 
 
+def submit_vote(game, player, vote):
+    game["players"][player]["vote"] = vote
+    output(player, "{} voted for {}".format(player, vote))
+
+def submit_vote_no_execution(game, player, yes):
+    game["players"][player]["vote_no_execution"] = yes
+    if yes:
+        output(player, "voting for no-execution if legal")
+    else:
+        output(player, "voting to execute even if no-execution is legal")
+
+def submit_vote_jailbreak(game, player, vote, yes):
+    if yes and vote not in game["players"][player]["jailbreak_votes"]:
+        game["players"][player]["jailbreak_votes"].append(vote)
+    elif not yes and vote in game["players"][player]["jailbreak_votes"]:
+        game["players"][player]["jailbreak_votes"].remove(vote)
+
 def grant_prophet_investigations(game, player, kill, correctTime, correctPlace, correctPerson):
     buddy = get_alive_buddy(game, player)
     game["players"][buddy]["investigations"][kill] = 1*(correctPerson + correctPlace + correctTime)
@@ -454,17 +497,6 @@ def submit_prophecy(game, player, prophecy):
     else:
         game["players"][player]["prophecies"][game["day"]]=prophecy
         output_player_buddy(game, player, "{} predicts on day {} that {}".format(player, game["day"]+1,prophecy))
-
-def submit_vote(game, player, vote):
-    game["players"][player]["vote"] = vote
-    output(player, "{} voted for {}".format(player, vote))
-
-def submit_vote_no_execution(game, player, yes):
-    game["players"][player]["vote_no_execution"] = yes
-    if yes:
-        output(player, "voting for no-execution if legal")
-    else:
-        output(player, "voting to execute even if no-execution is legal")
 
 def see(game, player, target, result=None):
     buddy = get_alive_buddy(game,player)
@@ -966,6 +998,8 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0],"target":l[2]}
         elif l[1] == "vote-no-execution":
             return {"action":l[1],"player":l[0],"yes":int(l[2])}
+        elif l[1] == "vote-jailbreak":
+            return {"action":l[1], "player":l[0],"target":l[2],"yes":int(l[3])}
         elif l[1] == "frame":
             return {"action":l[1],"player":l[0],"target":l[2], "kill":l[4]}
         elif l[1] == "trap":
@@ -1061,6 +1095,8 @@ def json_to_command(json_obj):
             return player + ' vote ' + json_obj['target']
         elif action == 'vote-no-execution':
             return player + ' vote-no-execution ' + str(json_obj['yes'])
+        elif action == 'vote-jailbreak':
+            return player + ' vote-jailbreak ' + json_obj['target'] + ' ' + str(json_obj['yes'])
         elif action == 'frame':
             return player + ' frame ' + json_obj['target'] + ' kill ' + json_obj['kill']
         elif action == 'trap':
@@ -1210,6 +1246,8 @@ def do_command(game, command):
             submit_vote(game, player, command["target"])
         elif action == "vote-no-execution":
             submit_vote_no_execution(game, player, command["yes"])
+        elif action == "vote-jailbreak":
+            submit_vote_jailbreak(game, player, command["target"], command["yes"])
         elif action == "frame":
             check_valid_player(game, command["target"])
             check_valid_player(game, command["kill"])

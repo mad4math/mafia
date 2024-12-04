@@ -34,6 +34,15 @@ function sendVoteNoExecution() {
   c.command.yes = document.getElementById("no-execution-checkbox").checked? 1 : 0;
   xhttp.send(JSON.stringify(c));
 }
+function sendVoteJailbreak(player) {
+  var xhttp = setupRequest();
+  var c = gg();
+  c.command.action = "vote-jailbreak";
+  c.command.target = player;
+  c.command.yes = document.getElementById("jailbreak-checkbox-"+player).checked? 1 : 0;
+  xhttp.send(JSON.stringify(c));
+}
+
 function sendInvestigation() {
   var xhttp = setupRequest();
   var c = gg();
@@ -59,20 +68,12 @@ function sendRoleblock() {
   c.command.target = getInput("target");
   xhttp.send(JSON.stringify(c));
 }
-function sendPriestSinnersList() {
+function sendPriestList() {
   var xhttp = setupRequest();
   var c = gg();
   c.command.action = "priest";
-  c.command.mode = "sinners";
-  c.command.list = Array.from(document.getElementById("sinners").getElementsByTagName("select")).map(x => x.value);
-  xhttp.send(JSON.stringify(c));
-}
-function sendPriestSaintsList() {
-  var xhttp = setupRequest();
-  var c = gg();
-  c.command.action = "priest";
-  c.command.mode = "saints";
-  c.command.list = Array.from(document.getElementById("saints").getElementsByTagName("select")).map(x => x.value);
+  c.command.mode = getInput("mode");
+  c.command.list = Array.from(document.getElementById("priestList").getElementsByTagName("select")).map(x => x.value).filter(x => x!=" ");
   xhttp.send(JSON.stringify(c));
 }
 function sendInfallible() {

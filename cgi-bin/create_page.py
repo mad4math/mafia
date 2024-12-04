@@ -144,21 +144,28 @@ def role(game, player):
 
 
     elif p["role"] == "priest":
-        alive_selector = "<select>{}</select><br>".format(alive_options)
-        size = int(len([x for x in pl if game["players"][x]["alive"]])*.2+.99)
+        alive_selector = "<select>{}</select><br>".format(alive_options+option(" "))
+        size = int(len([x for x in pl if game["players"][x]["alive"]])*.4)
+        future_sinners = ", ".join(x if i < size else "<s>"+x+"</s>" for (i,x) in enumerate(p["tomorrow"]["sinners"]))
+        remaining_size = size - len(p["tomorrow"]["sinners"])
+        future_saints = ", ".join(x if i < remaining_size else "<s>"+x+"</s>" for (i,x) in enumerate(p["tomorrow"]["saints"]))
         if p["active"]:
             role_actions += """
-                    Submit priest lists: (if enough people die before day rollover, the last entry from each will be ignored. The max size of each list is 20 percent of the number of alive players at the end of the day, rounded up.)<br>
-            Sinners:(<b>current selection for tomorrow is {}</b>)<div id="sinners">
-            {}    
-            <button onclick="sendPriestSinnersList()">Submit sinners list</button></div>
-            Saints:(<b>current selection for tomorrow is {}</b>)<div id="saints">
-            {}
-            <button onclick="sendPriestSaintsList()">Submit saints list</button></div>
+                    Submit priest lists: (if you lists are too big, the last people on your saints list will be ignored. 
+                    The max combined size of the lists is 40 percent of the number of alive players at the end of the day, rounded up.
+                    If your lists are currently too big, the entires that will be ignored are shown crossed out)<br>
+                    Current sinners list: {future_sinners}<br>
+                    Current saints list: {future_saints}<br>
+            List type:<select id="mode">{mode}</select><br>
+            <div id="priestList">
+            {list_selector}    
+            <button onclick="sendPriestList()">Submit list</button></div>
+            </div>
             Current lists for today:<br>
-            Sinners: {}<br>
-            Saints: {}<br>
-            """.format(p["tomorrow"]["sinners"],alive_selector*size,p["tomorrow"]["saints"],alive_selector*size,p["today"]["sinners"],p["today"]["saints"])
+            Sinners: {sinners}<br>
+            Saints: {saints}<br>
+            """.format(future_sinners = future_sinners, list_selector = alive_selector*size, future_saints = future_saints,
+                sinners = p["today"]["sinners"],saints = p["today"]["saints"], mode = option("sinners")+option("saints"))
         else:
             role_actions += """You lost your priestly role powers!"""
     elif p["role"] == "gay knight":
@@ -324,17 +331,31 @@ def display(game, player, messages):
 
 def player_info(game, player, messages):
     votable=[x for x in player_list(game) if game["players"][x]["alive"]]
-    if game["day"]<2:
+    if game["day"]<200:
+        pass
         votable+=["no-execution"]
-    return """
+    jailbreak_votes = "\n".join("""
+      <input type="checkbox" onClick=sendVoteJailbreak("{p}") id="jailbreak-checkbox-{p}" {is_checked}><label for="jailbreak-checkbox-{p}">Release {p} from jail</label>
+    """.format(p=p, is_checked = "checked" if p in game["players"][player]["jailbreak_votes"] else "")
+    for p in game["players"] if game["players"][p]["jailed"] and game["players"][p]["alive"]
+    )
+    #<input type="checkbox" onClick=sendVoteNoExecution() id="no-execution-checkbox" {no_execute}><label for="no-execution-checkbox">Vote no execution if legal</label>
+    voting = """
               <div>
-                Vote for a player to execute:<br>
+                Vote for a player to jail:<br>
                 <select id="vote">
                 {vote_options}
                 </select>
       <button onClick=sendVote()>Send Vote</button>
       Currently voting for: <b>{vote}</b>
-      <input type="checkbox" onClick=sendVoteNoExecution() id="no-execution-checkbox" {no_execute}><label for="no-execution-checkbox">Vote no execution if legal</label>
+      <div>
+      Vote to release players from jail:<br>
+      {jailbreak_votes}""".format(vote_options = "\n".join(option(x) for x in votable), 
+        vote = game["players"][player]["vote"] if not (mafia.can_vote_no_execution(game) and game["players"][player]["vote_no_execution"]) else """
+        <span style="text-decoration: line-through">{}</span>No Execution""".format(game["players"][player]["vote"]), no_execute = "checked" if game["players"][player]["vote_no_execution"] else "",
+        jailbreak_votes = jailbreak_votes)
+    return """
+    {voting}
     </div>
     <div id="faction-abilities">
     {faction}
@@ -344,10 +365,9 @@ def player_info(game, player, messages):
     </div>
     <h4> Game Log </h4>
     <div id="display" >{display}</div>
-    """.format(vote_options = "\n".join(option(x) for x in votable), 
-        vote = game["players"][player]["vote"] if not (mafia.can_vote_no_execution(game) and game["players"][player]["vote_no_execution"]) else """
-        <span style="text-decoration: line-through">{}</span>No Execution""".format(game["players"][player]["vote"]), no_execute = "checked" if game["players"][player]["vote_no_execution"] else "", 
-        faction = faction(game,player),role = role(game,player), display = display(game,player,messages))
+    """.format(voting = "You are jailed. You can't vote, and can't make kills, but you otherwise may still participate and take actions.<br>" if game["players"][player]["jailed"] else voting,
+        faction = faction(game,player),role = role(game,player), display = display(game,player,messages),
+        )
 
 def main_page(game, player, messages): 
     h="""
