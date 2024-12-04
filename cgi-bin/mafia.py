@@ -9,8 +9,8 @@ USE_BUDDY = False
 MANIP_WILDCARD = "$EVERYONE"
 
 #no gay knight
-roles = ["investigator","prophet","priest","vigilante","seer", "censusmaster", "fortune teller"] #all the roles
-common_roles = ["investigator","prophet","priest","vigilante","seer", "fortune teller"]
+roles = ["investigator","prophet","priest","vigilante","seer", "censusmaster", "jailer"] #all the roles
+common_roles = ["investigator","prophet","priest","vigilante","seer", "jailer"]
 straight_roles = ["investigator","prophet","priest","vigilante","seer"] #all the roles that aren't gay
 
 def load_gamestate(game_file):
@@ -73,6 +73,8 @@ def setup(game):
         elif p["role"] == "fortune teller":
             p["uses"] = 0
             p["killsChecked"] = []
+        elif p["role"] == "jailer":
+            p["jailings"] = 1
         elif p["role"] == "vigilante" and get_alive_buddy(game, player) != player:
             p["investigations"] = 1
     output("mafia","{} are the mafia ".format(",".join(x for x in game["players"] if game["players"][x]["team"]=="mafia")))
@@ -809,6 +811,14 @@ def remomve_mafia_omen(game, player, kill):
         raise IllegalAction("Can't set omens of players that have already died!")
     del game["mafia"]["omens"][kill]
 
+def jail_player(game, player, target, time):
+    if game["players"][player]["role"] != "jailer":
+        raise IllegalAction("Can't jail if you are not a jailer")
+    if game["players"][player]["jailings"] < 1:
+        raise IllegalAction("No jailings left")
+    game["players"][target]["jailed"] = True
+    game["players"][player]["jailings"] -= 1
+    output(player, "You jailed player "+target)
 
 
 
@@ -1036,6 +1046,8 @@ def command_to_json(command):
             return {"action":l[1],"player":l[0],"target":l[2], "kill":l[4]}
         elif l[1] == "grant_ritual_investigation":
             return {"action":l[1],"player":l[0]}
+        elif l[1] == "jail":
+            return {"action":l[1], "player":l[0], "target":l[2]}
 
         raise IllegalAction("bad syntax command not recognized:"+command)
 
@@ -1133,6 +1145,8 @@ def json_to_command(json_obj):
             return player + ' gravedig_frame ' + json_obj['target'] + ' for ' + json_obj['kill']
         elif action == 'grant_ritual_investigation':
             return player + ' ' + action
+        elif action == 'jail':
+            return player + ' ' + action + ' ' + json_obj['target']
         else:
             raise ValueError('Invalid action type: ' + action)
 
@@ -1292,6 +1306,8 @@ def do_command(game, command):
             promote_to_mafia(game, player)
         elif action == "grant_ritual_investigation":
             grant_ritual_investigation(game,player)
+        elif action == "jail":
+            jail_player(game, player, command["target"], "")
     return (game, command)
 
 if __name__=="__main__":
