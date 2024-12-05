@@ -811,14 +811,22 @@ def remomve_mafia_omen(game, player, kill):
         raise IllegalAction("Can't set omens of players that have already died!")
     del game["mafia"]["omens"][kill]
 
-def jail_player(game, player, target, time):
+def jail_player(game, player, target, time, location):
     if game["players"][player]["role"] != "jailer":
         raise IllegalAction("Can't jail if you are not a jailer")
     if game["players"][player]["jailings"] < 1:
         raise IllegalAction("No jailings left")
+    if location == "":
+        raise IllegalAction("Invalid empty location")
+    try:
+        t = datetime.datetime.strptime(time,"%y-%m-%d %H:%M")
+    except ValueError:
+        raise IllegalAction("Invalid time format")
+    if datetime.datetime.now() - t > datetime.timedelta(hours=1):
+        output("public", "{target} was jailed at {time} in {location}".format(target=target, time=time, location=location))
     game["players"][target]["jailed"] = True
     game["players"][player]["jailings"] -= 1
-    output(player, "You jailed player "+target)
+    output(player, "You jailed player {target} at {time} in {location}".format(target=target, time=time, location=location))
 
 
 
@@ -1047,7 +1055,7 @@ def command_to_json(command):
         elif l[1] == "grant_ritual_investigation":
             return {"action":l[1],"player":l[0]}
         elif l[1] == "jail":
-            return {"action":l[1], "player":l[0], "target":l[2]}
+            return {"action":l[1], "player":l[0], "target":l[2], "time":l[3], "location":l[4]}
 
         raise IllegalAction("bad syntax command not recognized:"+command)
 
@@ -1146,7 +1154,7 @@ def json_to_command(json_obj):
         elif action == 'grant_ritual_investigation':
             return player + ' ' + action
         elif action == 'jail':
-            return player + ' ' + action + ' ' + json_obj['target']
+            return player + ' ' + action + ' ' + json_obj['target'] + ' "' +json_obj['time'] + '" "' +json_obj['location'] + '"'
         else:
             raise ValueError('Invalid action type: ' + action)
 
@@ -1307,7 +1315,7 @@ def do_command(game, command):
         elif action == "grant_ritual_investigation":
             grant_ritual_investigation(game,player)
         elif action == "jail":
-            jail_player(game, player, command["target"], "")
+            jail_player(game, player, command["target"], command["time"], command["location"])
     return (game, command)
 
 if __name__=="__main__":

@@ -1,4 +1,5 @@
 import mafia
+import datetime
 
 option = lambda x:"<option value=\"{}\">{}</option>".format(x,x)
 player_list = lambda game:sorted(game["players"])
@@ -141,7 +142,15 @@ def role(game, player):
             Check <select id="fortuneTarget">{target}</select> for omens about the death of <select id="fortuneKill">{kill}</select>
             <button onclick="sendFortune()">Check fortunes</button>.
             """.format(target = "\n".join(option(x) for x in player_list(game)), kill = "\n".join(option(x) for x in game["deaths"]), x = p["uses"])         
+    elif p["role"] == "jailer":
+        role_actions += """
+        You may jail someone once per game, and you may free someone once per game. When you jail someone, record it here, as well as letting GM know in the death reporting thread.
+        There is nothing to report here when you free someone.<br>
 
+        Jailings left: {jailings_left}<br>
+
+        <span data-action="jail">I jailed <select name="target" data-a>{target}</select> at time <input name="time" value="{time}" data-a> in location <input name="location" data-a><button name="submit">Submit</button></span>
+        """.format(jailings_left = p["jailings"], target = alive_options, time = datetime.datetime.now().strftime("%y-%m-%d %H:%M"))
 
     elif p["role"] == "priest":
         alive_selector = "<select>{}</select><br>".format(option(" ")+alive_options)
@@ -312,7 +321,7 @@ def faction(game, player):
         else:
             a += """ You are <b>town</b>."""
     if game["players"][player]["team"] == "mafia":
-        a += """<br>
+        omen_setting = """<br>
         Set a bad omen for a future kill:<select id="mafiaOmenTarget">{target}</select> will have a Bad omen for the future death of <select id="mafiaOmenKill">{kill}</select>
         <button id="addOmen" onclick="sendOmen()">Submit</button>
         <br>(Note: You need to set who will have a bad omen before you make a kill; setting this field has no effect if you never kill the player.)<br>
@@ -321,6 +330,7 @@ def faction(game, player):
         <br><br>
         """.format(target = "\n".join(option(x) for x in player_list(game)), kill = "\n".join(option(x) for x in player_list(game) if game["players"][x]["alive"]),
             omens = "\n".join("""<button id="removeOmen" onclick="removeOmen('{y}')">Remove</button> {x} will have a Bad omen for the future death of {y}""".format(x=game["mafia"]["omens"][x],y=x) for x in game["mafia"]["omens"]))
+        #a += omen_setting
     return a 
 
 def display(game, player, messages):
